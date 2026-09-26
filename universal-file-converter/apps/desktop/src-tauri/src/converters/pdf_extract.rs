@@ -3,7 +3,7 @@ use crate::conversion::request::ConversionRequest;
 use crate::engines::manifest::{ConverterManifest, EngineType, Platform};
 use crate::engines::registry::Converter;
 use lopdf::Document;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 pub struct PdfTextExtractor {
     manifest: ConverterManifest,
@@ -27,7 +27,7 @@ impl PdfTextExtractor {
         }
     }
 
-    fn extract_text(path: &std::path::Path) -> Result<String, ConversionError> {
+    fn extract_text(path: &Path) -> Result<String, ConversionError> {
         let doc = Document::load(path)
             .map_err(|e| ConversionError::corrupt_input(&format!("Cannot load PDF: {}", e)))?;
 
@@ -163,6 +163,10 @@ fn extract_tj_text(line: &str) -> Option<String> {
     None
 }
 
+pub fn extract_pdf_text(path: &Path) -> Result<String, ConversionError> {
+    PdfTextExtractor::extract_text(path)
+}
+
 impl Converter for PdfTextExtractor {
     fn manifest(&self) -> &ConverterManifest {
         &self.manifest
@@ -179,7 +183,7 @@ impl Converter for PdfTextExtractor {
     fn convert(
         &self,
         request: &ConversionRequest,
-        job_dir: &PathBuf,
+        job_dir: &Path,
     ) -> Result<PathBuf, ConversionError> {
         let text = Self::extract_text(&request.input_path)?;
 

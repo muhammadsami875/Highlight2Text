@@ -37,7 +37,9 @@ pub fn save_history(entries: &[ConversionResult]) {
     let store = HistoryStore {
         entries: entries.to_vec(),
     };
-    let _ = fs::write(&path, serde_json::to_string_pretty(&store).unwrap_or_default());
+    if let Ok(json) = serde_json::to_string_pretty(&store) {
+        let _ = fs::write(&path, json);
+    }
 }
 
 pub fn add_to_history(result: ConversionResult) {

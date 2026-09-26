@@ -2,7 +2,7 @@ use super::manifest::ConverterManifest;
 use crate::conversion::error::ConversionError;
 use crate::conversion::request::ConversionRequest;
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 pub trait Converter: Send + Sync {
     fn manifest(&self) -> &ConverterManifest;
@@ -11,7 +11,7 @@ pub trait Converter: Send + Sync {
     fn convert(
         &self,
         request: &ConversionRequest,
-        job_dir: &PathBuf,
+        job_dir: &Path,
     ) -> Result<PathBuf, ConversionError>;
 }
 
@@ -45,6 +45,9 @@ impl ConverterRegistry {
             Box::new(crate::converters::text_to_pdf::TextToPdfConverter::new()),
             Box::new(crate::converters::xlsx_extract::XlsxExtractConverter::new()),
             Box::new(crate::converters::html_to_pdf::HtmlToPdfConverter::new()),
+            Box::new(crate::converters::pdf_to_docx::PdfToDocxConverter::new()),
+            Box::new(crate::converters::pdf_to_xlsx::PdfToXlsxConverter::new()),
+            Box::new(crate::converters::text_to_docx::TextToDocxConverter::new()),
         ];
 
         Self { converters }
@@ -87,7 +90,7 @@ impl ConverterRegistry {
     }
 
     pub fn is_supported(&self, from: &str, to: &str) -> bool {
-        self.find_direct(from, to).len() > 0
+        !self.find_direct(from, to).is_empty()
     }
 
     pub fn engine_status(&self) -> Vec<EngineInfo> {

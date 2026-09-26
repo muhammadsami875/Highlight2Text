@@ -27,6 +27,7 @@ syntect = "5"
 pulldown-cmark = "0.12"
 dirs-next = "2"
 open = "5"
+docx-rs = "0.4"
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }

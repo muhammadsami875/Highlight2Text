@@ -47,6 +47,10 @@ export function useConversion() {
           getJobStatus(event.jobId).then((job) => {
             if (mounted) setCurrentJob(job);
           });
+        } else {
+          getJobStatus(event.jobId).then((job) => {
+            if (mounted) setCurrentJob(job);
+          });
         }
       }
     }).then((unlisten) => {

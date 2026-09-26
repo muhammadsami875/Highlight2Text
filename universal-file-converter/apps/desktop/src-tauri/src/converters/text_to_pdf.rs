@@ -3,7 +3,7 @@ use crate::conversion::request::ConversionRequest;
 use crate::engines::manifest::{ConverterManifest, EngineType, Platform};
 use crate::engines::registry::Converter;
 use lopdf::{Document, Object, Stream};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 const INPUT_FORMATS: &[&str] = &[
     "txt", "md", "py", "rs", "js", "ts", "java", "c", "cpp", "go", "rb", "php", "swift", "kt",
@@ -51,28 +51,27 @@ impl TextToPdfConverter {
 
         let mut wrapped_lines: Vec<String> = Vec::new();
         for line in text.lines() {
-            if line.len() <= max_chars {
+            if line.chars().count() <= max_chars {
                 wrapped_lines.push(line.to_string());
             } else {
-                let mut remaining = line;
-                while remaining.len() > max_chars {
-                    let (chunk, rest) = remaining.split_at(max_chars);
-                    wrapped_lines.push(chunk.to_string());
-                    remaining = rest;
+                let mut buf = String::new();
+                let mut count = 0;
+                for ch in line.chars() {
+                    if count >= max_chars {
+                        wrapped_lines.push(buf.clone());
+                        buf.clear();
+                        count = 0;
+                    }
+                    buf.push(ch);
+                    count += 1;
                 }
-                if !remaining.is_empty() {
-                    wrapped_lines.push(remaining.to_string());
+                if !buf.is_empty() {
+                    wrapped_lines.push(buf);
                 }
             }
         }
 
         let mut doc = Document::with_version("1.7");
-
-        let font_id = doc.add_object(Stream::new(
-            lopdf::Dictionary::new(),
-            Vec::new(),
-        ));
-        let _ = font_id;
 
         let mut font_dict = lopdf::Dictionary::new();
         font_dict.set("Type", Object::Name(b"Font".to_vec()));
@@ -121,8 +120,8 @@ impl TextToPdfConverter {
             let media_box = Object::Array(vec![
                 Object::Real(0.0),
                 Object::Real(0.0),
-                Object::Real(page_width.into()),
-                Object::Real(page_height.into()),
+                Object::Real(page_width),
+                Object::Real(page_height),
             ]);
 
             let mut resources_fonts = lopdf::Dictionary::new();
@@ -188,7 +187,7 @@ impl Converter for TextToPdfConverter {
     fn convert(
         &self,
         request: &ConversionRequest,
-        job_dir: &PathBuf,
+        job_dir: &Path,
     ) -> Result<PathBuf, ConversionError> {
         let text = std::fs::read_to_string(&request.input_path)
             .map_err(|e| ConversionError::io_error(&format!("Cannot read input: {}", e)))?;

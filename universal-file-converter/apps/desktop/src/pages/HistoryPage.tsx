@@ -93,7 +93,7 @@ export function HistoryPage() {
                     {t("history.openFolder")}
                   </button>
                 )}
-                <button className="btn-ghost text-xs py-1">
+                <button className="btn-ghost text-xs py-1 opacity-50 cursor-not-allowed" disabled>
                   <RotateCcw size={12} className="mr-1 inline" />
                   {t("history.repeat")}
                 </button>

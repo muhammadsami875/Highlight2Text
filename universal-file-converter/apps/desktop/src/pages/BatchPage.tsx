@@ -154,8 +154,9 @@ export function BatchPage() {
   }, [clearAll]);
 
   const completedCount = items.filter((it) => it.status === "completed").length;
+  const finishedCount = items.filter((it) => it.status === "completed" || it.status === "failed").length;
   const overallProgress =
-    items.length > 0 ? Math.round((completedCount / items.length) * 100) : 0;
+    items.length > 0 ? Math.round((finishedCount / items.length) * 100) : 0;
 
   useEffect(() => {
     if (items.length > 0 && items.every((it) => it.status === "completed" || it.status === "failed")) {

@@ -3,7 +3,7 @@ use crate::conversion::request::ConversionRequest;
 use crate::engines::manifest::{ConverterManifest, EngineType, Platform};
 use crate::engines::registry::Converter;
 use lopdf::{Document, Object, Stream};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 pub struct HtmlToPdfConverter {
     manifest: ConverterManifest,
@@ -55,9 +55,10 @@ fn strip_html_tags(html: &str) -> String {
                 in_style = true;
             } else if lower == "/style" {
                 in_style = false;
-            } else if lower == "br" || lower == "br/" || lower == "br /" {
-                result.push('\n');
-            } else if lower == "p"
+            } else if lower == "br"
+                || lower == "br/"
+                || lower == "br /"
+                || lower == "p"
                 || lower == "/p"
                 || lower == "div"
                 || lower == "/div"
@@ -127,7 +128,7 @@ impl Converter for HtmlToPdfConverter {
     fn convert(
         &self,
         request: &ConversionRequest,
-        job_dir: &PathBuf,
+        job_dir: &Path,
     ) -> Result<PathBuf, ConversionError> {
         let html = std::fs::read_to_string(&request.input_path)
             .map_err(|e| ConversionError::io_error(&format!("Cannot read HTML: {}", e)))?;
@@ -152,17 +153,22 @@ impl Converter for HtmlToPdfConverter {
                 wrapped.push(String::new());
                 continue;
             }
-            if trimmed.len() <= max_chars {
+            if trimmed.chars().count() <= max_chars {
                 wrapped.push(trimmed.to_string());
             } else {
-                let mut rem = trimmed;
-                while rem.len() > max_chars {
-                    let (chunk, rest) = rem.split_at(max_chars);
-                    wrapped.push(chunk.to_string());
-                    rem = rest;
+                let mut buf = String::new();
+                let mut count = 0;
+                for ch in trimmed.chars() {
+                    if count >= max_chars {
+                        wrapped.push(buf.clone());
+                        buf.clear();
+                        count = 0;
+                    }
+                    buf.push(ch);
+                    count += 1;
                 }
-                if !rem.is_empty() {
-                    wrapped.push(rem.to_string());
+                if !buf.is_empty() {
+                    wrapped.push(buf);
                 }
             }
         }
@@ -208,8 +214,8 @@ impl Converter for HtmlToPdfConverter {
             let media_box = Object::Array(vec![
                 Object::Real(0.0),
                 Object::Real(0.0),
-                Object::Real(page_width.into()),
-                Object::Real(page_height.into()),
+                Object::Real(page_width),
+                Object::Real(page_height),
             ]);
 
             let mut res_fonts = lopdf::Dictionary::new();

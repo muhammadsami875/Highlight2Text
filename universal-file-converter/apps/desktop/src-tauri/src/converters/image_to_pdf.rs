@@ -2,7 +2,7 @@ use crate::conversion::error::ConversionError;
 use crate::conversion::request::ConversionRequest;
 use crate::engines::manifest::{ConverterManifest, EngineType, Platform};
 use crate::engines::registry::Converter;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 pub struct ImageToPdfConverter {
     manifest: ConverterManifest,
@@ -46,7 +46,7 @@ impl Converter for ImageToPdfConverter {
     fn convert(
         &self,
         request: &ConversionRequest,
-        job_dir: &PathBuf,
+        job_dir: &Path,
     ) -> Result<PathBuf, ConversionError> {
         let img = image::open(&request.input_path)
             .map_err(|e| ConversionError::corrupt_input(&format!("Cannot decode image: {}", e)))?;
@@ -66,23 +66,32 @@ impl Converter for ImageToPdfConverter {
         std::fs::create_dir_all(output_path.parent().unwrap())
             .map_err(|e| ConversionError::io_error(&format!("Cannot create output dir: {}", e)))?;
 
+        let rgb_img = img.to_rgb8();
+        let img_data = rgb_img.as_raw().clone();
+
         let mut doc = lopdf::Document::with_version("1.7");
-        let pages_id = doc.new_object_id();
-        let page_id = doc.new_object_id();
-        let content_id = doc.new_object_id();
 
-        let content = lopdf::content::Content {
-            operations: vec![],
-        };
-        let content_data = content.encode().unwrap_or_default();
+        let mut img_dict = lopdf::Dictionary::new();
+        img_dict.set("Type", lopdf::Object::Name(b"XObject".to_vec()));
+        img_dict.set("Subtype", lopdf::Object::Name(b"Image".to_vec()));
+        img_dict.set("Width", lopdf::Object::Integer(width as i64));
+        img_dict.set("Height", lopdf::Object::Integer(height as i64));
+        img_dict.set("ColorSpace", lopdf::Object::Name(b"DeviceRGB".to_vec()));
+        img_dict.set("BitsPerComponent", lopdf::Object::Integer(8));
+        let img_obj_id = doc.add_object(lopdf::Stream::new(img_dict, img_data));
 
-        let mut stream_dict = lopdf::Dictionary::new();
-        stream_dict.set("Length", lopdf::Object::Integer(content_data.len() as i64));
-
-        doc.objects.insert(
-            content_id,
-            lopdf::Object::Stream(lopdf::Stream::new(stream_dict, content_data)),
+        let content_str = format!(
+            "q\n{} 0 0 {} 0 0 cm\n/Img1 Do\nQ\n",
+            page_width_pt, page_height_pt
         );
+
+        let content_stream = lopdf::Stream::new(lopdf::Dictionary::new(), content_str.into_bytes());
+        let content_id = doc.add_object(content_stream);
+
+        let mut xobjects = lopdf::Dictionary::new();
+        xobjects.set("Img1", lopdf::Object::Reference(img_obj_id));
+        let mut resources = lopdf::Dictionary::new();
+        resources.set("XObject", lopdf::Object::Dictionary(xobjects));
 
         let media_box = lopdf::Object::Array(vec![
             lopdf::Object::Integer(0),
@@ -91,24 +100,31 @@ impl Converter for ImageToPdfConverter {
             lopdf::Object::Real(page_height_pt),
         ]);
 
+        let mut pages_dict = lopdf::Dictionary::new();
+        pages_dict.set("Type", lopdf::Object::Name(b"Pages".to_vec()));
+        pages_dict.set("Kids", lopdf::Object::Array(Vec::new()));
+        pages_dict.set("Count", lopdf::Object::Integer(0));
+        let pages_id = doc.add_object(pages_dict);
+
         let mut page_dict = lopdf::Dictionary::new();
         page_dict.set("Type", lopdf::Object::Name(b"Page".to_vec()));
         page_dict.set("Parent", lopdf::Object::Reference(pages_id));
         page_dict.set("MediaBox", media_box);
         page_dict.set("Contents", lopdf::Object::Reference(content_id));
-        doc.objects.insert(page_id, lopdf::Object::Dictionary(page_dict));
+        page_dict.set("Resources", lopdf::Object::Dictionary(resources));
+        let page_id = doc.add_object(page_dict);
 
-        let mut pages_dict = lopdf::Dictionary::new();
-        pages_dict.set("Type", lopdf::Object::Name(b"Pages".to_vec()));
-        pages_dict.set("Kids", lopdf::Object::Array(vec![lopdf::Object::Reference(page_id)]));
-        pages_dict.set("Count", lopdf::Object::Integer(1));
-        doc.objects.insert(pages_id, lopdf::Object::Dictionary(pages_dict));
+        let pages_obj = doc.get_object_mut(pages_id)
+            .map_err(|_| ConversionError::engine_failure("image_to_pdf", "Failed to build PDF pages"))?;
+        if let lopdf::Object::Dictionary(ref mut dict) = *pages_obj {
+            dict.set("Kids", lopdf::Object::Array(vec![lopdf::Object::Reference(page_id)]));
+            dict.set("Count", lopdf::Object::Integer(1));
+        }
 
-        let catalog_id = doc.new_object_id();
         let mut catalog = lopdf::Dictionary::new();
         catalog.set("Type", lopdf::Object::Name(b"Catalog".to_vec()));
         catalog.set("Pages", lopdf::Object::Reference(pages_id));
-        doc.objects.insert(catalog_id, lopdf::Object::Dictionary(catalog));
+        let catalog_id = doc.add_object(catalog);
         doc.trailer.set("Root", lopdf::Object::Reference(catalog_id));
 
         doc.save(&output_path)
