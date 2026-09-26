@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { detectFile } from "@/services/ipc";
+import { detectFile, getSupportedOutputs } from "@/services/ipc";
 import { getOutputFormats } from "@/services/formatMatrix";
 import { useConversionStore } from "@/stores/conversionStore";
 
@@ -15,8 +15,29 @@ export function useFileDetection() {
       try {
         const detected = await detectFile(filePath);
         setInputFile(detected);
-        const outputs = getOutputFormats(detected.detectedFormat);
-        setOutputFormats(outputs);
+
+        const clientFormats = getOutputFormats(detected.detectedFormat);
+
+        try {
+          const backendRoutes = await getSupportedOutputs(detected.detectedFormat);
+          const backendFormats = new Set(backendRoutes.map((r) => r.to));
+
+          const merged = clientFormats.map((f) => ({
+            ...f,
+            level: backendFormats.has(f.format) ? f.level : ("experimental" as const),
+          }));
+
+          for (const route of backendRoutes) {
+            if (!merged.some((m) => m.format === route.to)) {
+              merged.push({ format: route.to, level: "supported" });
+            }
+          }
+
+          setOutputFormats(merged);
+        } catch {
+          setOutputFormats(clientFormats);
+        }
+
         return detected;
       } catch (err) {
         const message =
