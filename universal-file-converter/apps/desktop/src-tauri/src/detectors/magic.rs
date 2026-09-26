@@ -145,6 +145,20 @@ pub fn detect_by_magic(path: &Path) -> Result<MagicResult, String> {
                 });
             }
         }
+
+        if looks_like_csv(text) {
+            return Ok(MagicResult {
+                format: "csv".to_string(),
+                mime: "text/csv".to_string(),
+            });
+        }
+
+        if looks_like_markdown(text) {
+            return Ok(MagicResult {
+                format: "md".to_string(),
+                mime: "text/markdown".to_string(),
+            });
+        }
     }
 
     if let Some(kind) = infer::get(data) {
@@ -204,4 +218,62 @@ fn detect_zip_subtype(path: &Path) -> String {
 
 fn detect_ole2_subtype(_path: &Path) -> String {
     "doc".to_string()
+}
+
+fn looks_like_csv(text: &str) -> bool {
+    let lines: Vec<&str> = text.lines().take(10).collect();
+    if lines.len() < 2 {
+        return false;
+    }
+
+    // Only check comma and tab — semicolons cause false positives with code
+    for delim in [',', '\t'] {
+        let counts: Vec<usize> = lines.iter().map(|l| l.matches(delim).count()).collect();
+        if counts[0] == 0 {
+            continue;
+        }
+        let first = counts[0];
+        let consistent = counts.iter().filter(|&&c| c == first).count();
+        if consistent >= counts.len() * 3 / 4 {
+            // Reject if lines contain braces/brackets (likely code, not CSV)
+            let has_code_chars = lines.iter().any(|l| l.contains('{') || l.contains('}'));
+            if !has_code_chars {
+                return true;
+            }
+        }
+    }
+    false
+}
+
+fn looks_like_markdown(text: &str) -> bool {
+    let lines: Vec<&str> = text.lines().take(30).collect();
+    if lines.is_empty() {
+        return false;
+    }
+    let mut score = 0u32;
+
+    if lines[0].starts_with("---") {
+        score += 2;
+    }
+
+    for line in &lines {
+        let trimmed = line.trim();
+        if trimmed.starts_with("# ") || trimmed.starts_with("## ") || trimmed.starts_with("### ") {
+            score += 2;
+        }
+        if trimmed.starts_with("- ") || trimmed.starts_with("* ") || trimmed.starts_with("1. ") {
+            score += 1;
+        }
+        if trimmed.contains("**") || trimmed.contains("__") {
+            score += 1;
+        }
+        if trimmed.starts_with("```") {
+            score += 2;
+        }
+        if trimmed.starts_with('[') && trimmed.contains("](") {
+            score += 2;
+        }
+    }
+
+    score >= 3
 }
