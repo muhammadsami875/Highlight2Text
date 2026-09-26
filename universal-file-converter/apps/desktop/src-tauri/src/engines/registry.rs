@@ -36,6 +36,10 @@ impl ConverterRegistry {
         let converters: Vec<Box<dyn Converter>> = vec![
             Box::new(crate::converters::image_convert::ImageConverter::new()),
             Box::new(crate::converters::image_to_pdf::ImageToPdfConverter::new()),
+            Box::new(crate::converters::markdown_to_html::MarkdownToHtmlConverter::new()),
+            Box::new(crate::converters::csv_json::CsvJsonConverter::new()),
+            Box::new(crate::converters::csv_xlsx::CsvXlsxConverter::new()),
+            Box::new(crate::converters::code_highlight::CodeHighlightConverter::new()),
         ];
 
         Self { converters }
