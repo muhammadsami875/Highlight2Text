@@ -1,0 +1,119 @@
+{
+  "app": {
+    "name": "Universal File Converter",
+    "version": "0.1.0"
+  },
+  "nav": {
+    "home": "Home",
+    "convert": "Convert",
+    "batch": "Batch",
+    "history": "History",
+    "favorites": "Favorites",
+    "settings": "Settings",
+    "about": "About"
+  },
+  "home": {
+    "dropzone": "Drop files here to convert",
+    "chooseFile": "Choose File",
+    "chooseFolder": "Choose Folder",
+    "popularConversions": "Popular Conversions",
+    "recentConversions": "Recent Conversions",
+    "noRecent": "No recent conversions"
+  },
+  "convert": {
+    "inputFile": "Input File",
+    "outputFormat": "Output Format",
+    "convertButton": "Convert",
+    "converting": "Converting...",
+    "selectFormat": "Select output format",
+    "searchFormats": "Search formats...",
+    "options": "Conversion Options",
+    "noOptions": "No additional options for this conversion",
+    "supported": "Supported",
+    "experimental": "Experimental",
+    "unsupported": "Not Supported"
+  },
+  "batch": {
+    "title": "Batch Conversion",
+    "addFiles": "Add Files",
+    "clearAll": "Clear All",
+    "startAll": "Start All",
+    "pauseAll": "Pause",
+    "resumeAll": "Resume",
+    "cancelAll": "Cancel All",
+    "retryFailed": "Retry Failed",
+    "removeCompleted": "Remove Completed",
+    "queueEmpty": "No files in queue",
+    "progress": "{completed} of {total} completed"
+  },
+  "history": {
+    "title": "Conversion History",
+    "noHistory": "No conversion history",
+    "clearHistory": "Clear History",
+    "openFile": "Open File",
+    "openFolder": "Open Folder",
+    "repeat": "Convert Again",
+    "delete": "Remove"
+  },
+  "favorites": {
+    "title": "Favorite Conversions",
+    "noFavorites": "No favorites yet",
+    "addHint": "Star a conversion to add it here"
+  },
+  "settings": {
+    "title": "Settings",
+    "general": "General",
+    "conversion": "Conversion",
+    "pdf": "PDF",
+    "images": "Images",
+    "ocr": "OCR",
+    "advanced": "Advanced",
+    "saved": "Settings saved"
+  },
+  "file": {
+    "name": "Name",
+    "type": "Type",
+    "size": "Size",
+    "pages": "Pages",
+    "sheets": "Sheets",
+    "dimensions": "Dimensions",
+    "detected": "Detected type",
+    "mismatchWarning": "File extension does not match detected file type",
+    "remove": "Remove",
+    "replace": "Replace",
+    "viewInfo": "View Info"
+  },
+  "status": {
+    "queued": "Queued",
+    "detecting": "Detecting format...",
+    "planning": "Planning conversion...",
+    "preparing": "Preparing...",
+    "converting": "Converting...",
+    "validating": "Validating output...",
+    "completed": "Completed",
+    "failed": "Failed",
+    "cancelled": "Cancelled"
+  },
+  "errors": {
+    "unsupportedFormat": "This format is not supported",
+    "unsupportedConversion": "Conversion from {from} to {to} is not supported",
+    "corruptInput": "The input file appears to be corrupted",
+    "permissionDenied": "Permission denied accessing the file",
+    "outputPathError": "Cannot write to the output location",
+    "missingDependency": "Required conversion engine is not available: {engine}",
+    "engineFailure": "The conversion engine encountered an error",
+    "diskSpace": "Insufficient disk space",
+    "passwordProtected": "This file is password-protected",
+    "timeout": "Conversion timed out",
+    "genericError": "An error occurred during conversion"
+  },
+  "about": {
+    "title": "Universal File Converter",
+    "description": "A professional desktop application for converting files between formats.",
+    "version": "Version",
+    "engines": "Conversion Engines",
+    "available": "Available",
+    "unavailable": "Not Available",
+    "licenses": "Third-Party Licenses"
+  }
+}

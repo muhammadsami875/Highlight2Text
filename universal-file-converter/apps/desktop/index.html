@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Universal File Converter</title>
+  </head>
+  <body class="bg-surface-50 dark:bg-surface-950 text-surface-900 dark:text-surface-100">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+    <script>
+      document.addEventListener("dragover", (e) => e.preventDefault());
+      document.addEventListener("drop", (e) => e.preventDefault());
+      document.addEventListener("contextmenu", (e) => {
+        if (e.target.tagName !== "INPUT" && e.target.tagName !== "TEXTAREA") {
+          e.preventDefault();
+        }
+      });
+    </script>
+  </body>
+</html>
