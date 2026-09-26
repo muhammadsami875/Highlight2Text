@@ -7,6 +7,7 @@ import {
 } from "@/services/ipc";
 import { useConversionStore } from "@/stores/conversionStore";
 import { useHistoryStore } from "@/stores/historyStore";
+import { useToastStore } from "@/stores/toastStore";
 import type { ProgressEvent } from "@/services/ipc";
 
 export function useConversion() {
@@ -21,6 +22,7 @@ export function useConversion() {
     setIsConverting,
   } = useConversionStore();
   const { addRecentPair } = useHistoryStore();
+  const { addToast } = useToastStore();
 
   useEffect(() => {
     let mounted = true;
@@ -28,11 +30,19 @@ export function useConversion() {
     onConversionProgress((event: ProgressEvent) => {
       if (!mounted) return;
       if (activeJobRef.current && event.jobId === activeJobRef.current) {
-        if (
-          event.status === "completed" ||
-          event.status === "failed" ||
-          event.status === "cancelled"
-        ) {
+        if (event.status === "completed") {
+          setIsConverting(false);
+          addToast("success", "Conversion completed successfully");
+          getJobStatus(event.jobId).then((job) => {
+            if (mounted) setCurrentJob(job);
+          });
+        } else if (event.status === "failed") {
+          setIsConverting(false);
+          addToast("error", event.message || "Conversion failed");
+          getJobStatus(event.jobId).then((job) => {
+            if (mounted) setCurrentJob(job);
+          });
+        } else if (event.status === "cancelled") {
           setIsConverting(false);
           getJobStatus(event.jobId).then((job) => {
             if (mounted) setCurrentJob(job);

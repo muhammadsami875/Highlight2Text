@@ -1,16 +1,19 @@
 import { Save } from "lucide-react";
 import { useSettings } from "@/hooks/useSettings";
+import { useToastStore } from "@/stores/toastStore";
 import { t } from "@/i18n";
 
 export function SettingsPage() {
   const { settings, isDirty, updateSettings, save, resetToDefaults } =
     useSettings();
+  const { addToast } = useToastStore();
 
   const handleSave = async () => {
     try {
       await save();
+      addToast("success", "Settings saved");
     } catch {
-      // error handling via toast in future
+      addToast("error", "Failed to save settings");
     }
   };
 

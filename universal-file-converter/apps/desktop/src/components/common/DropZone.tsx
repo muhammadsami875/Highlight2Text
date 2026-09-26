@@ -1,6 +1,7 @@
-import { useState, useCallback, type DragEvent, type ReactNode } from "react";
+import { useState, useCallback, type DragEvent, type ReactNode, type KeyboardEvent } from "react";
 import { clsx } from "clsx";
 import { Upload } from "lucide-react";
+import { open } from "@tauri-apps/plugin-dialog";
 import { t } from "@/i18n";
 
 interface DropZoneProps {
@@ -8,6 +9,7 @@ interface DropZoneProps {
   children?: ReactNode;
   className?: string;
   compact?: boolean;
+  multiple?: boolean;
 }
 
 export function DropZone({
@@ -15,6 +17,7 @@ export function DropZone({
   children,
   className,
   compact = false,
+  multiple = true,
 }: DropZoneProps) {
   const [isDragOver, setIsDragOver] = useState(false);
 
@@ -45,16 +48,49 @@ export function DropZone({
     [onFilesDropped]
   );
 
+  const handleClick = useCallback(async () => {
+    try {
+      const selected = await open({
+        multiple,
+        title: "Select files to convert",
+      });
+      if (selected) {
+        const paths = Array.isArray(selected) ? selected : [selected];
+        if (paths.length > 0) {
+          onFilesDropped(paths);
+        }
+      }
+    } catch {
+      // user cancelled
+    }
+  }, [multiple, onFilesDropped]);
+
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        handleClick();
+      }
+    },
+    [handleClick]
+  );
+
   return (
     <div
+      role="button"
+      tabIndex={0}
+      aria-label="Drop files here or click to browse"
       className={clsx(
         compact ? "dropzone !p-6" : "dropzone",
         isDragOver && "dropzone-active",
+        "cursor-pointer",
         className
       )}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
+      onClick={handleClick}
+      onKeyDown={handleKeyDown}
     >
       {children ?? (
         <div className="flex flex-col items-center gap-3">
@@ -69,6 +105,9 @@ export function DropZone({
             )}
           >
             {t("home.dropzone")}
+          </p>
+          <p className="text-xs text-surface-400 dark:text-surface-500">
+            or click to browse
           </p>
         </div>
       )}
