@@ -70,6 +70,10 @@ impl PdfTextExtractor {
     }
 }
 
+pub fn extract_pdf_text(path: &std::path::Path) -> Result<String, ConversionError> {
+    PdfTextExtractor::extract_text(path)
+}
+
 fn extract_text_from_content(content: &[u8]) -> String {
     let mut result = String::new();
     let content_str = String::from_utf8_lossy(content);

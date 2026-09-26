@@ -45,6 +45,9 @@ impl ConverterRegistry {
             Box::new(crate::converters::text_to_pdf::TextToPdfConverter::new()),
             Box::new(crate::converters::xlsx_extract::XlsxExtractConverter::new()),
             Box::new(crate::converters::html_to_pdf::HtmlToPdfConverter::new()),
+            Box::new(crate::converters::pdf_to_docx::PdfToDocxConverter::new()),
+            Box::new(crate::converters::pdf_to_xlsx::PdfToXlsxConverter::new()),
+            Box::new(crate::converters::text_to_docx::TextToDocxConverter::new()),
         ];
 
         Self { converters }

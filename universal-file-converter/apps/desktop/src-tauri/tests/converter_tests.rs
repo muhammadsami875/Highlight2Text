@@ -577,3 +577,100 @@ fn convert_csv_roundtrip() {
     let csv_str = std::fs::read_to_string(result.unwrap()).unwrap();
     assert!(csv_str.contains("Alice"));
 }
+
+// ─── Office converter tests ───
+
+#[test]
+fn registry_finds_pdf_to_docx() {
+    let registry = ConverterRegistry::new();
+    assert!(registry.is_supported("pdf", "docx"));
+}
+
+#[test]
+fn registry_finds_pdf_to_xlsx() {
+    let registry = ConverterRegistry::new();
+    assert!(registry.is_supported("pdf", "xlsx"));
+}
+
+#[test]
+fn registry_finds_txt_to_docx() {
+    let registry = ConverterRegistry::new();
+    assert!(registry.is_supported("txt", "docx"));
+    assert!(registry.is_supported("md", "docx"));
+}
+
+#[test]
+fn convert_pdf_to_docx() {
+    let job_dir = temp_job_dir();
+    let converter = converters::pdf_to_docx::PdfToDocxConverter::new();
+    let request = ConversionRequest {
+        input_path: fixture("sample_text.pdf"),
+        detected_format: "pdf".into(),
+        output_format: "docx".into(),
+        output_dir: job_dir.join("output"),
+        options: default_options(),
+    };
+    let result = converter.convert(&request, &job_dir);
+    assert!(result.is_ok(), "pdf to docx failed: {:?}", result.err());
+    let output = result.unwrap();
+    assert!(output.exists());
+    let contents = std::fs::read(&output).unwrap();
+    assert!(contents.starts_with(&[0x50, 0x4B, 0x03, 0x04]));
+}
+
+#[test]
+fn convert_pdf_to_xlsx() {
+    let job_dir = temp_job_dir();
+    let converter = converters::pdf_to_xlsx::PdfToXlsxConverter::new();
+    let request = ConversionRequest {
+        input_path: fixture("sample_text.pdf"),
+        detected_format: "pdf".into(),
+        output_format: "xlsx".into(),
+        output_dir: job_dir.join("output"),
+        options: default_options(),
+    };
+    let result = converter.convert(&request, &job_dir);
+    assert!(result.is_ok(), "pdf to xlsx failed: {:?}", result.err());
+    let output = result.unwrap();
+    assert!(output.exists());
+    let contents = std::fs::read(&output).unwrap();
+    assert!(contents.starts_with(&[0x50, 0x4B, 0x03, 0x04]));
+}
+
+#[test]
+fn convert_txt_to_docx() {
+    let job_dir = temp_job_dir();
+    let converter = converters::text_to_docx::TextToDocxConverter::new();
+    let request = ConversionRequest {
+        input_path: fixture("sample.txt"),
+        detected_format: "txt".into(),
+        output_format: "docx".into(),
+        output_dir: job_dir.join("output"),
+        options: default_options(),
+    };
+    let result = converter.convert(&request, &job_dir);
+    assert!(result.is_ok(), "txt to docx failed: {:?}", result.err());
+    let output = result.unwrap();
+    assert!(output.exists());
+    let contents = std::fs::read(&output).unwrap();
+    assert!(contents.starts_with(&[0x50, 0x4B, 0x03, 0x04]));
+}
+
+#[test]
+fn convert_md_to_docx() {
+    let job_dir = temp_job_dir();
+    let converter = converters::text_to_docx::TextToDocxConverter::new();
+    let request = ConversionRequest {
+        input_path: fixture("sample.md"),
+        detected_format: "md".into(),
+        output_format: "docx".into(),
+        output_dir: job_dir.join("output"),
+        options: default_options(),
+    };
+    let result = converter.convert(&request, &job_dir);
+    assert!(result.is_ok(), "md to docx failed: {:?}", result.err());
+    let output = result.unwrap();
+    assert!(output.exists());
+    let contents = std::fs::read(&output).unwrap();
+    assert!(contents.starts_with(&[0x50, 0x4B, 0x03, 0x04]));
+}
