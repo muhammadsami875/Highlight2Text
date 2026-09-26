@@ -22,6 +22,10 @@ export const useSettingsStore = create<SettingsState>((set) => ({
       const newSettings = JSON.parse(JSON.stringify(state.settings));
       let current: Record<string, unknown> = newSettings;
       for (let i = 0; i < keys.length - 1; i++) {
+        const next = current[keys[i]];
+        if (next === null || next === undefined || typeof next !== "object") {
+          current[keys[i]] = {};
+        }
         current = current[keys[i]] as Record<string, unknown>;
       }
       current[keys[keys.length - 1]] = value;

@@ -2,7 +2,7 @@ use crate::conversion::error::ConversionError;
 use crate::conversion::request::ConversionRequest;
 use crate::engines::manifest::{ConverterManifest, EngineType, Platform};
 use crate::engines::registry::Converter;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 pub struct CsvJsonConverter {
     manifest: ConverterManifest,
@@ -116,7 +116,7 @@ impl Converter for CsvJsonConverter {
     fn convert(
         &self,
         request: &ConversionRequest,
-        job_dir: &PathBuf,
+        job_dir: &Path,
     ) -> Result<PathBuf, ConversionError> {
         let stem = request.input_path.file_stem().and_then(|s| s.to_str()).unwrap_or("output");
         let (content, ext) = match (request.detected_format.as_str(), request.output_format.as_str()) {

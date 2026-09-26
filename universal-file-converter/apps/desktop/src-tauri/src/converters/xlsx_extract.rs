@@ -3,7 +3,7 @@ use crate::conversion::request::ConversionRequest;
 use crate::engines::manifest::{ConverterManifest, EngineType, Platform};
 use crate::engines::registry::Converter;
 use calamine::{open_workbook_auto, Data, Reader};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 pub struct XlsxExtractConverter {
     manifest: ConverterManifest,
@@ -134,7 +134,7 @@ impl Converter for XlsxExtractConverter {
     fn convert(
         &self,
         request: &ConversionRequest,
-        job_dir: &PathBuf,
+        job_dir: &Path,
     ) -> Result<PathBuf, ConversionError> {
         let stem = request
             .input_path

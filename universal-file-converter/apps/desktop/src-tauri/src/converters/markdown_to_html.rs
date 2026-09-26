@@ -2,7 +2,7 @@ use crate::conversion::error::ConversionError;
 use crate::conversion::request::ConversionRequest;
 use crate::engines::manifest::{ConverterManifest, EngineType, Platform};
 use crate::engines::registry::Converter;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 pub struct MarkdownToHtmlConverter {
     manifest: ConverterManifest,
@@ -43,7 +43,7 @@ impl Converter for MarkdownToHtmlConverter {
     fn convert(
         &self,
         request: &ConversionRequest,
-        job_dir: &PathBuf,
+        job_dir: &Path,
     ) -> Result<PathBuf, ConversionError> {
         let markdown = std::fs::read_to_string(&request.input_path)
             .map_err(|e| ConversionError::io_error(&format!("Cannot read input: {}", e)))?;

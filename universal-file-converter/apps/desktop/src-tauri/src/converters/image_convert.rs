@@ -3,7 +3,7 @@ use crate::conversion::request::ConversionRequest;
 use crate::engines::manifest::{ConverterManifest, EngineType, Platform};
 use crate::engines::registry::Converter;
 use image::ImageFormat;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 pub struct ImageConverter {
     manifest: ConverterManifest,
@@ -54,7 +54,7 @@ impl Converter for ImageConverter {
     fn convert(
         &self,
         request: &ConversionRequest,
-        job_dir: &PathBuf,
+        job_dir: &Path,
     ) -> Result<PathBuf, ConversionError> {
         let img = image::open(&request.input_path)
             .map_err(|e| ConversionError::corrupt_input(&format!("Cannot decode image: {}", e)))?;
@@ -80,11 +80,7 @@ impl Converter for ImageConverter {
             .file_stem()
             .and_then(|s| s.to_str())
             .unwrap_or("output");
-        let ext = match request.output_format.as_str() {
-            "jpg" => "jpg",
-            other => other,
-        };
-        let output_path = job_dir.join("output").join(format!("{}.{}", stem, ext));
+        let output_path = job_dir.join("output").join(format!("{}.{}", stem, request.output_format));
         std::fs::create_dir_all(output_path.parent().unwrap())
             .map_err(|e| ConversionError::io_error(&format!("Cannot create output dir: {}", e)))?;
 

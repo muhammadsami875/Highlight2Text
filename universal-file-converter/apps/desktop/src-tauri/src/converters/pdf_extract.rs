@@ -3,7 +3,7 @@ use crate::conversion::request::ConversionRequest;
 use crate::engines::manifest::{ConverterManifest, EngineType, Platform};
 use crate::engines::registry::Converter;
 use lopdf::Document;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 pub struct PdfTextExtractor {
     manifest: ConverterManifest,
@@ -179,7 +179,7 @@ impl Converter for PdfTextExtractor {
     fn convert(
         &self,
         request: &ConversionRequest,
-        job_dir: &PathBuf,
+        job_dir: &Path,
     ) -> Result<PathBuf, ConversionError> {
         let text = Self::extract_text(&request.input_path)?;
 

@@ -48,9 +48,13 @@ fn validate_pdf(path: &Path) -> ValidationResult {
 }
 
 fn validate_openxml(path: &Path) -> ValidationResult {
-    match zip::ZipArchive::new(fs::File::open(path).unwrap()) {
+    let file = match fs::File::open(path) {
+        Ok(f) => f,
+        Err(e) => return ValidationResult::Invalid(format!("Cannot open: {}", e)),
+    };
+    match zip::ZipArchive::new(file) {
         Ok(archive) => {
-            if archive.len() == 0 {
+            if archive.is_empty() {
                 ValidationResult::Invalid("Empty archive".to_string())
             } else {
                 ValidationResult::Valid

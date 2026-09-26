@@ -2,7 +2,7 @@ use crate::conversion::error::ConversionError;
 use crate::conversion::request::ConversionRequest;
 use crate::engines::manifest::{ConverterManifest, EngineType, Platform};
 use crate::engines::registry::Converter;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use syntect::highlighting::ThemeSet;
 use syntect::html::highlighted_html_for_string;
 use syntect::parsing::SyntaxSet;
@@ -74,7 +74,7 @@ impl Converter for CodeHighlightConverter {
     fn convert(
         &self,
         request: &ConversionRequest,
-        job_dir: &PathBuf,
+        job_dir: &Path,
     ) -> Result<PathBuf, ConversionError> {
         let source = std::fs::read_to_string(&request.input_path)
             .map_err(|e| ConversionError::io_error(&format!("Cannot read input: {}", e)))?;

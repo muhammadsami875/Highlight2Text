@@ -261,8 +261,9 @@ pub async fn get_batch_progress(
     }
 
     let total = job_ids.len();
+    let finished = completed + failed + cancelled;
     let overall = if total > 0 {
-        (completed as f32 / total as f32) * 100.0
+        (finished as f32 / total as f32) * 100.0
     } else {
         0.0
     };

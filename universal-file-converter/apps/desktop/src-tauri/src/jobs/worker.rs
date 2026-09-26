@@ -128,8 +128,8 @@ async fn process_single_job(
     }
     emit_progress(app, job_id, 10.0, "Converting...", "converting");
 
-    let job_dir = std::env::temp_dir()
-        .join("ufc_jobs")
+    let job_dir = crate::filesystem::get_temp_base()
+        .join("jobs")
         .join(job_id);
     let _ = std::fs::create_dir_all(job_dir.join("output"));
 
