@@ -8,13 +8,13 @@ interface MatrixEntry {
 
 const MATRIX: Record<string, Record<string, MatrixEntry>> = {
   pdf: {
-    docx: { level: "supported", engine: "pdf_text", notes: "Layout is approximate" },
+    docx: { level: "supported", engine: "pdf_to_docx", notes: "Text extraction - layout is approximate" },
     txt: { level: "supported", engine: "pdf_text" },
     html: { level: "experimental", engine: "pdf_text" },
     png: { level: "supported", engine: "pdf_image" },
     jpg: { level: "supported", engine: "pdf_image" },
     csv: { level: "supported", engine: "pdf_table", notes: "Table extraction quality varies" },
-    xlsx: { level: "supported", engine: "pdf_table", notes: "Table extraction quality varies" },
+    xlsx: { level: "supported", engine: "pdf_to_xlsx", notes: "Text extracted as rows" },
   },
   docx: {
     pdf: { level: "supported", engine: "libreoffice" },
@@ -36,13 +36,13 @@ const MATRIX: Record<string, Record<string, MatrixEntry>> = {
     docx: { level: "supported", engine: "libreoffice" },
   },
   txt: {
-    pdf: { level: "supported", engine: "libreoffice" },
-    docx: { level: "supported", engine: "pandoc" },
+    pdf: { level: "supported", engine: "text_to_pdf" },
+    docx: { level: "supported", engine: "text_to_docx" },
   },
   md: {
-    pdf: { level: "supported", engine: "pandoc+html_to_pdf" },
-    docx: { level: "supported", engine: "pandoc" },
-    html: { level: "supported", engine: "pandoc" },
+    pdf: { level: "supported", engine: "text_to_pdf" },
+    docx: { level: "supported", engine: "text_to_docx" },
+    html: { level: "supported", engine: "markdown_to_html" },
   },
   html: {
     pdf: { level: "supported", engine: "html_to_pdf" },

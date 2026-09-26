@@ -27,7 +27,7 @@ impl PdfTextExtractor {
         }
     }
 
-    fn extract_text(path: &std::path::Path) -> Result<String, ConversionError> {
+    fn extract_text(path: &Path) -> Result<String, ConversionError> {
         let doc = Document::load(path)
             .map_err(|e| ConversionError::corrupt_input(&format!("Cannot load PDF: {}", e)))?;
 
@@ -161,6 +161,10 @@ fn extract_tj_text(line: &str) -> Option<String> {
     }
 
     None
+}
+
+pub fn extract_pdf_text(path: &Path) -> Result<String, ConversionError> {
+    PdfTextExtractor::extract_text(path)
 }
 
 impl Converter for PdfTextExtractor {
