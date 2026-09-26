@@ -19,7 +19,7 @@ impl XlsxExtractConverter {
                 engine_type: EngineType::Bundled,
                 license: "MIT".to_string(),
                 input_formats: vec!["xlsx".into(), "xls".into(), "ods".into()],
-                output_formats: vec!["csv".into(), "json".into()],
+                output_formats: vec!["csv".into(), "tsv".into(), "json".into()],
                 platforms: vec![Platform::Windows, Platform::MacOS, Platform::Linux],
                 priority: 100,
                 capabilities: vec!["data_extraction".into()],
@@ -93,6 +93,28 @@ impl XlsxExtractConverter {
         serde_json::to_string_pretty(&records)
             .map_err(|e| ConversionError::engine_failure("xlsx_extract", &format!("JSON error: {}", e)))
     }
+
+    fn extract_to_tsv(path: &std::path::Path) -> Result<String, ConversionError> {
+        let mut workbook = open_workbook_auto(path)
+            .map_err(|e| ConversionError::corrupt_input(&format!("Cannot open spreadsheet: {}", e)))?;
+
+        let sheet_names = workbook.sheet_names().to_vec();
+        if sheet_names.is_empty() {
+            return Err(ConversionError::corrupt_input("No sheets found"));
+        }
+
+        let range = workbook
+            .worksheet_range(&sheet_names[0])
+            .map_err(|e| ConversionError::corrupt_input(&format!("Cannot read sheet: {}", e)))?;
+
+        let mut output = String::new();
+        for row in range.rows() {
+            let fields: Vec<String> = row.iter().map(cell_to_string).collect();
+            output.push_str(&fields.join("\t"));
+            output.push('\n');
+        }
+        Ok(output)
+    }
 }
 
 fn cell_to_string(cell: &Data) -> String {
@@ -128,7 +150,7 @@ impl Converter for XlsxExtractConverter {
         if from == to {
             return false;
         }
-        matches!(from, "xlsx" | "xls" | "ods") && matches!(to, "csv" | "json")
+        matches!(from, "xlsx" | "xls" | "ods") && matches!(to, "csv" | "tsv" | "json")
     }
 
     fn convert(
@@ -144,6 +166,7 @@ impl Converter for XlsxExtractConverter {
 
         let (content, ext) = match request.output_format.as_str() {
             "csv" => (Self::extract_to_csv(&request.input_path)?, "csv"),
+            "tsv" => (Self::extract_to_tsv(&request.input_path)?, "tsv"),
             "json" => (Self::extract_to_json(&request.input_path)?, "json"),
             _ => {
                 return Err(ConversionError::unsupported(

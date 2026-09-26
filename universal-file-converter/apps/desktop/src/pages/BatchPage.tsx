@@ -72,7 +72,7 @@ export function BatchPage() {
       try {
         const detected = await detectFile(path);
         const routes = await getSupportedOutputs(detected.detectedFormat);
-        const defaultOutput = routes.length > 0 ? routes[0].to : "pdf";
+        const defaultOutput = routes.length > 0 ? routes[0].format : "pdf";
 
         newItems.push({
           id: crypto.randomUUID(),

@@ -10,7 +10,9 @@ const INPUT_FORMATS: &[&str] = &[
     "docx", "doc", "odt", "rtf", "xlsx", "xls", "ods", "pptx", "ppt", "odp", "html", "txt",
 ];
 
-const OUTPUT_FORMATS: &[&str] = &["pdf"];
+const OUTPUT_FORMATS: &[&str] = &[
+    "pdf", "docx", "html", "txt", "odt", "xlsx", "csv", "pptx",
+];
 
 fn find_soffice() -> Option<PathBuf> {
     let candidates = if cfg!(target_os = "windows") {

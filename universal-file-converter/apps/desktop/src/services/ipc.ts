@@ -9,7 +9,13 @@ import type {
   BatchProgress,
 } from "@/types/conversion";
 import type { AppSettings } from "@/types/settings";
-import type { ConversionRoute } from "@/types/formats";
+import type { SupportLevel } from "@/types/formats";
+
+export interface SupportedOutput {
+  format: string;
+  level: SupportLevel;
+  notes?: string;
+}
 
 export interface ProgressEvent {
   jobId: string;
@@ -32,7 +38,7 @@ export async function detectFile(path: string): Promise<DetectedFile> {
 
 export async function getSupportedOutputs(
   inputFormat: string
-): Promise<ConversionRoute[]> {
+): Promise<SupportedOutput[]> {
   return invoke("get_supported_outputs", { inputFormat });
 }
 

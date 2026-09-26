@@ -20,7 +20,7 @@ export function useFileDetection() {
 
         try {
           const backendRoutes = await getSupportedOutputs(detected.detectedFormat);
-          const backendFormats = new Set(backendRoutes.map((r) => r.to));
+          const backendFormats = new Set(backendRoutes.map((r) => r.format));
 
           const merged = clientFormats.map((f) => ({
             ...f,
@@ -28,8 +28,8 @@ export function useFileDetection() {
           }));
 
           for (const route of backendRoutes) {
-            if (!merged.some((m) => m.format === route.to)) {
-              merged.push({ format: route.to, level: "supported" });
+            if (!merged.some((m) => m.format === route.format)) {
+              merged.push({ format: route.format, level: route.level });
             }
           }
 

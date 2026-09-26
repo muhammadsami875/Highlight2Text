@@ -47,7 +47,7 @@ const MATRIX: Record<string, Record<string, MatrixEntry>> = {
   html: {
     pdf: { level: "supported", engine: "html_to_pdf" },
     docx: { level: "experimental", engine: "pandoc" },
-    txt: { level: "supported", engine: "html_to_pdf" },
+    txt: { level: "supported", engine: "html_to_txt" },
     png: { level: "experimental", engine: "html_to_pdf" },
   },
   xlsx: {

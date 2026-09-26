@@ -19,7 +19,7 @@ impl HtmlToPdfConverter {
                 engine_type: EngineType::Bundled,
                 license: "MIT".to_string(),
                 input_formats: vec!["html".into()],
-                output_formats: vec!["pdf".into()],
+                output_formats: vec!["pdf".into(), "txt".into()],
                 platforms: vec![Platform::Windows, Platform::MacOS, Platform::Linux],
                 priority: 70,
                 capabilities: vec!["html_to_pdf".into()],
@@ -121,7 +121,7 @@ impl Converter for HtmlToPdfConverter {
     }
 
     fn can_convert(&self, from: &str, to: &str) -> bool {
-        from == "html" && to == "pdf"
+        from == "html" && (to == "pdf" || to == "txt")
     }
 
     fn convert(
@@ -133,6 +133,20 @@ impl Converter for HtmlToPdfConverter {
             .map_err(|e| ConversionError::io_error(&format!("Cannot read HTML: {}", e)))?;
 
         let text = strip_html_tags(&html);
+
+        if request.output_format == "txt" {
+            let stem = request
+                .input_path
+                .file_stem()
+                .and_then(|s| s.to_str())
+                .unwrap_or("output");
+            let output_path = job_dir.join("output").join(format!("{}.txt", stem));
+            std::fs::create_dir_all(output_path.parent().unwrap())
+                .map_err(|e| ConversionError::io_error(&format!("Cannot create output dir: {}", e)))?;
+            std::fs::write(&output_path, text.trim())
+                .map_err(|e| ConversionError::io_error(&format!("Cannot write output: {}", e)))?;
+            return Ok(output_path);
+        }
 
         let font_size: f32 = 10.0;
         let line_height = font_size * 1.4;
