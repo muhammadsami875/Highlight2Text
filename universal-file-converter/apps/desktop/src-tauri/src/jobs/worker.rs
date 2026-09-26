@@ -1,16 +1,21 @@
+use crate::commands::ProgressEvent;
 use crate::conversion::error::ConversionError;
 use crate::conversion::job::JobStatus;
 use crate::conversion::request::ConversionRequest;
 use crate::engines::registry::ConverterRegistry;
 use crate::jobs::queue::JobQueue;
 use crate::planner;
+use crate::validators;
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::time::Instant;
+use tauri::Emitter;
 use tokio::sync::Mutex;
 
 pub async fn process_queue(
     queue: Arc<Mutex<JobQueue>>,
     registry: Arc<ConverterRegistry>,
+    app: Option<tauri::AppHandle>,
 ) {
     loop {
         let job_id = {
@@ -23,7 +28,18 @@ pub async fn process_queue(
             None => break,
         };
 
-        process_single_job(&job_id, &queue, &registry).await;
+        process_single_job(&job_id, &queue, &registry, &app).await;
+    }
+}
+
+fn emit_progress(app: &Option<tauri::AppHandle>, job_id: &str, progress: f32, message: &str, status: &str) {
+    if let Some(handle) = app {
+        let _ = handle.emit("conversion-progress", ProgressEvent {
+            job_id: job_id.to_string(),
+            progress,
+            message: message.to_string(),
+            status: status.to_string(),
+        });
     }
 }
 
@@ -31,7 +47,10 @@ async fn process_single_job(
     job_id: &str,
     queue: &Arc<Mutex<JobQueue>>,
     registry: &Arc<ConverterRegistry>,
+    app: &Option<tauri::AppHandle>,
 ) {
+    let start_time = Instant::now();
+
     {
         let mut q = queue.lock().await;
         if let Some(job) = q.get_mut(job_id) {
@@ -40,6 +59,7 @@ async fn process_single_job(
             job.progress_message = "Planning conversion...".into();
         }
     }
+    emit_progress(app, job_id, 5.0, "Planning conversion...", "planning");
 
     let (from, to, input_path, output_dir, options) = {
         let q = queue.lock().await;
@@ -106,6 +126,7 @@ async fn process_single_job(
             job.progress_message = "Converting...".into();
         }
     }
+    emit_progress(app, job_id, 10.0, "Converting...", "converting");
 
     let job_dir = std::env::temp_dir()
         .join("ufc_jobs")
@@ -152,6 +173,7 @@ async fn process_single_job(
                 );
             }
         }
+        emit_progress(app, job_id, step_progress, &format!("Step {}/{}: {} -> {}", step_idx + 1, total_steps, step.from, step.to), "converting");
 
         let step_from = step.from.clone();
         let step_to = step.to.clone();
@@ -199,6 +221,7 @@ async fn process_single_job(
             job.progress_message = "Validating output...".into();
         }
     }
+    emit_progress(app, job_id, 95.0, "Validating output...", "validating");
 
     if !current_input.exists() {
         let mut q = queue.lock().await;
@@ -208,6 +231,23 @@ async fn process_single_job(
             ));
         }
         return;
+    }
+
+    match validators::validate_output(&current_input, &to) {
+        validators::ValidationResult::Valid => {}
+        validators::ValidationResult::ValidWithWarnings(warnings) => {
+            let mut q = queue.lock().await;
+            if let Some(job) = q.get_mut(job_id) {
+                job.warnings.extend(warnings);
+            }
+        }
+        validators::ValidationResult::Invalid(reason) => {
+            let mut q = queue.lock().await;
+            if let Some(job) = q.get_mut(job_id) {
+                job.fail(ConversionError::validation_failed(&reason));
+            }
+            return;
+        }
     }
 
     let final_output = output_dir.join(
@@ -230,12 +270,15 @@ async fn process_single_job(
         }
     }
 
+    let duration_ms = start_time.elapsed().as_millis() as u64;
+
     {
         let mut q = queue.lock().await;
         if let Some(job) = q.get_mut(job_id) {
             job.complete(final_output.to_string_lossy().to_string());
         }
     }
+    emit_progress(app, job_id, 100.0, "Conversion complete", "completed");
 
     let _ = std::fs::remove_dir_all(&job_dir);
 
@@ -254,7 +297,7 @@ async fn process_single_job(
             } else {
                 None
             },
-            duration: 0,
+            duration: duration_ms,
             warnings: job.warnings.clone(),
             error: job.error.clone(),
         };

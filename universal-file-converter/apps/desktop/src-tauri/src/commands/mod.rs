@@ -10,6 +10,15 @@ use serde::{Deserialize, Serialize};
 use tauri::State;
 use uuid::Uuid;
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProgressEvent {
+    pub job_id: String,
+    pub progress: f32,
+    pub message: String,
+    pub status: String,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SupportedOutput {
@@ -73,6 +82,7 @@ pub async fn start_conversion(
     output_dir: String,
     options: ConversionOptions,
     state: State<'_, AppState>,
+    app: tauri::AppHandle,
 ) -> Result<String, String> {
     let input = std::path::Path::new(&input_path);
     let detected = detectors::detect_format(input)?;
@@ -101,7 +111,7 @@ pub async fn start_conversion(
     let queue = state.job_queue.clone();
     let registry = state.registry.clone();
     tokio::spawn(async move {
-        worker::process_queue(queue, registry).await;
+        worker::process_queue(queue.clone(), registry, Some(app)).await;
     });
 
     Ok(job_id)
@@ -136,6 +146,7 @@ pub async fn cancel_job(
 pub async fn retry_job(
     job_id: String,
     state: State<'_, AppState>,
+    app: tauri::AppHandle,
 ) -> Result<String, String> {
     let new_job = {
         let queue = state.job_queue.lock().await;
@@ -163,7 +174,7 @@ pub async fn retry_job(
     let queue = state.job_queue.clone();
     let registry = state.registry.clone();
     tokio::spawn(async move {
-        worker::process_queue(queue, registry).await;
+        worker::process_queue(queue, registry, Some(app)).await;
     });
 
     Ok(new_id)
@@ -175,6 +186,7 @@ pub async fn start_batch(
     output_dir: String,
     options: ConversionOptions,
     state: State<'_, AppState>,
+    app: tauri::AppHandle,
 ) -> Result<Vec<String>, String> {
     let mut ids = Vec::new();
 
@@ -215,7 +227,7 @@ pub async fn start_batch(
     let queue = state.job_queue.clone();
     let registry = state.registry.clone();
     tokio::spawn(async move {
-        worker::process_queue(queue, registry).await;
+        worker::process_queue(queue, registry, Some(app)).await;
     });
 
     Ok(ids)

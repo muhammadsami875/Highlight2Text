@@ -24,10 +24,13 @@ pub fn generate_output_filename(
     suffix: &str,
     output_dir: &Path,
 ) -> PathBuf {
-    let stem = Path::new(source_name)
+    let raw_stem = Path::new(source_name)
         .file_stem()
         .and_then(|s| s.to_str())
         .unwrap_or("output");
+
+    let stem = crate::security::sanitize_filename(raw_stem);
+    let stem = if stem.is_empty() { "output".to_string() } else { stem };
 
     let base_name = format!("{}{}.{}", stem, suffix, output_format);
     let mut output_path = output_dir.join(&base_name);

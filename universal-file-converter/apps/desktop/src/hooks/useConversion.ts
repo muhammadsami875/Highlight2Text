@@ -1,13 +1,18 @@
-import { useState, useCallback, useRef } from "react";
-import { listen } from "@tauri-apps/api/event";
-import { startConversion, getJobStatus, cancelJob } from "@/services/ipc";
+import { useState, useCallback, useRef, useEffect } from "react";
+import {
+  startConversion,
+  getJobStatus,
+  cancelJob,
+  onConversionProgress,
+} from "@/services/ipc";
 import { useConversionStore } from "@/stores/conversionStore";
 import { useHistoryStore } from "@/stores/historyStore";
-import type { ConversionJob } from "@/types/conversion";
+import type { ProgressEvent } from "@/services/ipc";
 
 export function useConversion() {
   const [error, setError] = useState<string | null>(null);
   const unlistenRef = useRef<(() => void) | null>(null);
+  const activeJobRef = useRef<string | null>(null);
   const {
     inputFile,
     outputFormat,
@@ -16,6 +21,38 @@ export function useConversion() {
     setIsConverting,
   } = useConversionStore();
   const { addRecentPair } = useHistoryStore();
+
+  useEffect(() => {
+    let mounted = true;
+
+    onConversionProgress((event: ProgressEvent) => {
+      if (!mounted) return;
+      if (activeJobRef.current && event.jobId === activeJobRef.current) {
+        if (
+          event.status === "completed" ||
+          event.status === "failed" ||
+          event.status === "cancelled"
+        ) {
+          setIsConverting(false);
+          getJobStatus(event.jobId).then((job) => {
+            if (mounted) setCurrentJob(job);
+          });
+        }
+      }
+    }).then((unlisten) => {
+      if (mounted) {
+        unlistenRef.current = unlisten;
+      } else {
+        unlisten();
+      }
+    });
+
+    return () => {
+      mounted = false;
+      unlistenRef.current?.();
+      unlistenRef.current = null;
+    };
+  }, [setCurrentJob, setIsConverting]);
 
   const convert = useCallback(
     async (outputDir: string) => {
@@ -31,21 +68,7 @@ export function useConversion() {
           options
         );
 
-        unlistenRef.current = await listen<ConversionJob>(
-          `conversion-progress-${jobId}`,
-          (event) => {
-            setCurrentJob(event.payload);
-            if (
-              event.payload.status === "completed" ||
-              event.payload.status === "failed" ||
-              event.payload.status === "cancelled"
-            ) {
-              setIsConverting(false);
-              unlistenRef.current?.();
-              unlistenRef.current = null;
-            }
-          }
-        );
+        activeJobRef.current = jobId;
 
         const status = await getJobStatus(jobId);
         setCurrentJob(status);

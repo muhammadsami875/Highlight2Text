@@ -31,6 +31,9 @@ pub struct AppState {
 pub fn run() {
     env_logger::init();
 
+    let temp_base = filesystem::get_temp_base();
+    filesystem::cleanup_abandoned_jobs(&temp_base, 1);
+
     let registry = Arc::new(ConverterRegistry::new());
     let job_queue = Arc::new(Mutex::new(JobQueue::new()));
 

@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import type {
   ConversionJob,
   ConversionOptions,
@@ -9,6 +10,21 @@ import type {
 } from "@/types/conversion";
 import type { AppSettings } from "@/types/settings";
 import type { ConversionRoute } from "@/types/formats";
+
+export interface ProgressEvent {
+  jobId: string;
+  progress: number;
+  message: string;
+  status: string;
+}
+
+export async function onConversionProgress(
+  callback: (event: ProgressEvent) => void
+): Promise<UnlistenFn> {
+  return listen<ProgressEvent>("conversion-progress", (event) => {
+    callback(event.payload);
+  });
+}
 
 export async function detectFile(path: string): Promise<DetectedFile> {
   return invoke("detect_file", { path });
