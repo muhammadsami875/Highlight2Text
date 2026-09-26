@@ -1,19 +1,18 @@
-import { Info, CheckCircle2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Info, CheckCircle2, XCircle } from "lucide-react";
+import { getEngineStatus } from "@/services/ipc";
+import type { EngineInfo } from "@/types/conversion";
 import { t } from "@/i18n";
 
-const ENGINES = [
-  { name: "LibreOffice", desc: "Office document conversions", license: "MPL 2.0 / LGPL 3" },
-  { name: "Pandoc", desc: "Structured text/document conversions", license: "GPL 2+" },
-  { name: "Poppler", desc: "PDF rendering and extraction", license: "GPL 2+" },
-  { name: "wkhtmltopdf", desc: "HTML to PDF rendering", license: "LGPL 3" },
-  { name: "Tesseract", desc: "Optical character recognition", license: "Apache 2.0" },
-  { name: "FFmpeg", desc: "Audio/video conversions", license: "LGPL 2.1+" },
-  { name: "image (Rust)", desc: "Image format conversions", license: "MIT / Apache-2.0" },
-  { name: "syntect (Rust)", desc: "Syntax highlighting", license: "MIT" },
-  { name: "lopdf (Rust)", desc: "PDF text extraction", license: "MIT" },
-];
-
 export function AboutPage() {
+  const [engines, setEngines] = useState<EngineInfo[]>([]);
+
+  useEffect(() => {
+    getEngineStatus()
+      .then(setEngines)
+      .catch(() => {});
+  }, []);
+
   return (
     <div className="space-y-6 max-w-2xl">
       <div className="flex items-start gap-4">
@@ -38,9 +37,9 @@ export function AboutPage() {
           {t("about.engines")}
         </h3>
         <div className="space-y-3">
-          {ENGINES.map((engine) => (
+          {engines.map((engine) => (
             <div
-              key={engine.name}
+              key={engine.id}
               className="flex items-center justify-between py-2 border-b border-surface-100 dark:border-surface-800 last:border-0"
             >
               <div>
@@ -48,7 +47,8 @@ export function AboutPage() {
                   {engine.name}
                 </p>
                 <p className="text-xs text-surface-400 dark:text-surface-500">
-                  {engine.desc}
+                  {engine.inputFormats.join(", ")} &rarr;{" "}
+                  {engine.outputFormats.join(", ")}
                 </p>
               </div>
               <div className="flex items-center gap-3">
@@ -56,13 +56,21 @@ export function AboutPage() {
                   {engine.license}
                 </span>
                 <div className="flex items-center gap-1">
-                  <CheckCircle2
-                    size={14}
-                    className="text-emerald-500"
-                  />
-                  <span className="text-xs text-emerald-600 dark:text-emerald-400">
-                    {t("about.available")}
-                  </span>
+                  {engine.available ? (
+                    <>
+                      <CheckCircle2 size={14} className="text-emerald-500" />
+                      <span className="text-xs text-emerald-600 dark:text-emerald-400">
+                        {t("about.available")}
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <XCircle size={14} className="text-surface-400" />
+                      <span className="text-xs text-surface-400 dark:text-surface-500">
+                        Not installed
+                      </span>
+                    </>
+                  )}
                 </div>
               </div>
             </div>

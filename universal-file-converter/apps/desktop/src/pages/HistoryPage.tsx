@@ -1,11 +1,36 @@
+import { useEffect } from "react";
 import { Clock, FolderOpen, RotateCcw, Trash2 } from "lucide-react";
 import { useHistoryStore } from "@/stores/historyStore";
 import { formatFileSize } from "@/utils/fileSize";
 import { formatDuration } from "@/utils/fileSize";
+import {
+  getConversionHistory,
+  clearHistory as clearHistoryIpc,
+  openFileLocation,
+} from "@/services/ipc";
 import { t } from "@/i18n";
 
 export function HistoryPage() {
-  const { history, clearHistory } = useHistoryStore();
+  const { history, setHistory, clearHistory } = useHistoryStore();
+
+  useEffect(() => {
+    getConversionHistory()
+      .then(setHistory)
+      .catch(() => {});
+  }, [setHistory]);
+
+  const handleClearHistory = async () => {
+    try {
+      await clearHistoryIpc();
+      clearHistory();
+    } catch {
+      // silent
+    }
+  };
+
+  const handleOpenFolder = (path: string) => {
+    openFileLocation(path).catch(() => {});
+  };
 
   return (
     <div className="space-y-6">
@@ -15,7 +40,7 @@ export function HistoryPage() {
         </h2>
         {history.length > 0 && (
           <button
-            onClick={clearHistory}
+            onClick={handleClearHistory}
             className="btn-ghost text-sm text-red-500"
           >
             <Trash2 size={14} className="mr-1.5 inline" />
@@ -60,7 +85,10 @@ export function HistoryPage() {
               </div>
               <div className="flex items-center gap-2 mt-3">
                 {item.success && item.outputPath && (
-                  <button className="btn-ghost text-xs py-1">
+                  <button
+                    onClick={() => handleOpenFolder(item.outputPath!)}
+                    className="btn-ghost text-xs py-1"
+                  >
                     <FolderOpen size={12} className="mr-1 inline" />
                     {t("history.openFolder")}
                   </button>
