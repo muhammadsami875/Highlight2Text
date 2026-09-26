@@ -107,9 +107,9 @@ fn registry_supported_outputs_for_png() {
 fn registry_engine_status_lists_all() {
     let registry = ConverterRegistry::new();
     let status = registry.engine_status();
-    assert!(status.len() >= 8);
+    assert!(status.len() >= 9);
     let bundled_count = status.iter().filter(|e| e.available).count();
-    assert!(bundled_count >= 7);
+    assert!(bundled_count >= 8);
 }
 
 // ─── Planner tests ───
@@ -364,6 +364,51 @@ fn convert_pdf_to_txt() {
     let output = result.unwrap();
     let text = std::fs::read_to_string(&output).unwrap();
     assert!(text.contains("Hello World"));
+}
+
+#[test]
+fn registry_finds_xlsx_to_csv() {
+    let registry = ConverterRegistry::new();
+    assert!(registry.is_supported("xlsx", "csv"));
+    assert!(registry.is_supported("xlsx", "json"));
+    assert!(registry.is_supported("ods", "csv"));
+}
+
+#[test]
+fn convert_xlsx_to_csv() {
+    let job_dir = temp_job_dir();
+    let converter = converters::xlsx_extract::XlsxExtractConverter::new();
+    let request = ConversionRequest {
+        input_path: fixture("sample.xlsx"),
+        detected_format: "xlsx".into(),
+        output_format: "csv".into(),
+        output_dir: job_dir.join("output"),
+        options: default_options(),
+    };
+    let result = converter.convert(&request, &job_dir);
+    assert!(result.is_ok(), "xlsx to csv failed: {:?}", result.err());
+    let output = result.unwrap();
+    let csv_str = std::fs::read_to_string(&output).unwrap();
+    assert!(!csv_str.is_empty());
+}
+
+#[test]
+fn convert_xlsx_to_json() {
+    let job_dir = temp_job_dir();
+    let converter = converters::xlsx_extract::XlsxExtractConverter::new();
+    let request = ConversionRequest {
+        input_path: fixture("sample.xlsx"),
+        detected_format: "xlsx".into(),
+        output_format: "json".into(),
+        output_dir: job_dir.join("output"),
+        options: default_options(),
+    };
+    let result = converter.convert(&request, &job_dir);
+    assert!(result.is_ok(), "xlsx to json failed: {:?}", result.err());
+    let output = result.unwrap();
+    let json_str = std::fs::read_to_string(&output).unwrap();
+    let parsed: serde_json::Value = serde_json::from_str(&json_str).unwrap();
+    assert!(parsed.is_array());
 }
 
 #[test]

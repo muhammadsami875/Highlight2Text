@@ -7,3 +7,4 @@ pub mod libreoffice;
 pub mod markdown_to_html;
 pub mod pdf_extract;
 pub mod text_to_pdf;
+pub mod xlsx_extract;
