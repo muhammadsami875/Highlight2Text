@@ -1,6 +1,5 @@
 use universal_file_converter::security;
 use universal_file_converter::filesystem;
-use std::path::Path;
 
 #[test]
 fn sanitize_filename_removes_path_separators() {

@@ -464,3 +464,116 @@ fn converter_manifests_have_required_fields() {
         assert!(!engine.output_formats.is_empty());
     }
 }
+
+// ─── Multi-step conversion tests ───
+
+#[test]
+fn planner_md_to_pdf_direct() {
+    let registry = ConverterRegistry::new();
+    let plan = planner::plan_conversion("md", "pdf", &registry);
+    assert!(plan.is_some(), "md -> pdf should have a route");
+    let plan = plan.unwrap();
+    assert_eq!(plan.steps.len(), 1);
+    assert_eq!(plan.steps[0].from, "md");
+    assert_eq!(plan.steps[0].to, "pdf");
+}
+
+#[test]
+fn planner_json_to_xlsx_via_csv() {
+    let registry = ConverterRegistry::new();
+    let plan = planner::plan_conversion("json", "xlsx", &registry);
+    assert!(plan.is_some(), "json -> xlsx should have a route");
+    let plan = plan.unwrap();
+    assert_eq!(plan.steps.len(), 2);
+    assert_eq!(plan.steps[0].from, "json");
+    assert_eq!(plan.steps[0].to, "csv");
+    assert_eq!(plan.steps[1].from, "csv");
+    assert_eq!(plan.steps[1].to, "xlsx");
+}
+
+#[test]
+fn planner_code_to_pdf_direct() {
+    let registry = ConverterRegistry::new();
+    let plan = planner::plan_conversion("py", "pdf", &registry);
+    assert!(plan.is_some(), "py -> pdf should have a route");
+    let plan = plan.unwrap();
+    assert_eq!(plan.steps.len(), 1);
+    assert_eq!(plan.steps[0].from, "py");
+    assert_eq!(plan.steps[0].to, "pdf");
+}
+
+#[test]
+fn planner_bmp_to_pdf_via_image() {
+    let registry = ConverterRegistry::new();
+    let plan = planner::plan_conversion("bmp", "pdf", &registry);
+    assert!(plan.is_some(), "bmp -> pdf should have a route");
+}
+
+// ─── Additional converter tests ───
+
+#[test]
+fn convert_png_to_webp() {
+    let job_dir = temp_job_dir();
+    let converter = converters::image_convert::ImageConverter::new();
+    let request = ConversionRequest {
+        input_path: fixture("sample.png"),
+        detected_format: "png".into(),
+        output_format: "webp".into(),
+        output_dir: job_dir.join("output"),
+        options: default_options(),
+    };
+    let result = converter.convert(&request, &job_dir);
+    assert!(result.is_ok(), "png to webp failed: {:?}", result.err());
+    assert!(result.unwrap().exists());
+}
+
+#[test]
+fn convert_jpg_to_png() {
+    let job_dir = temp_job_dir();
+    let converter = converters::image_convert::ImageConverter::new();
+    let request = ConversionRequest {
+        input_path: fixture("sample.jpg"),
+        detected_format: "jpg".into(),
+        output_format: "png".into(),
+        output_dir: job_dir.join("output"),
+        options: default_options(),
+    };
+    let result = converter.convert(&request, &job_dir);
+    assert!(result.is_ok(), "jpg to png failed: {:?}", result.err());
+    assert!(result.unwrap().exists());
+}
+
+#[test]
+fn convert_rejects_same_image_format() {
+    let converter = converters::image_convert::ImageConverter::new();
+    assert!(!converter.can_convert("png", "png"));
+    assert!(!converter.can_convert("jpg", "jpg"));
+}
+
+#[test]
+fn convert_csv_roundtrip() {
+    let job_dir = temp_job_dir();
+
+    let csv_converter = converters::csv_json::CsvJsonConverter::new();
+    let request = ConversionRequest {
+        input_path: fixture("sample.csv"),
+        detected_format: "csv".into(),
+        output_format: "json".into(),
+        output_dir: job_dir.join("output"),
+        options: default_options(),
+    };
+    let json_path = csv_converter.convert(&request, &job_dir).unwrap();
+
+    let job_dir2 = temp_job_dir();
+    let request2 = ConversionRequest {
+        input_path: json_path,
+        detected_format: "json".into(),
+        output_format: "csv".into(),
+        output_dir: job_dir2.join("output"),
+        options: default_options(),
+    };
+    let result = csv_converter.convert(&request2, &job_dir2);
+    assert!(result.is_ok(), "CSV roundtrip failed: {:?}", result.err());
+    let csv_str = std::fs::read_to_string(result.unwrap()).unwrap();
+    assert!(csv_str.contains("Alice"));
+}
