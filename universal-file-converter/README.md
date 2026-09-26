@@ -77,35 +77,79 @@ apps/desktop/
 
 **Testing:** Vitest (frontend, 51 tests), Cargo test (backend, 109 tests)
 
-## Getting Started
+## Installation
+
+### Download Pre-built Packages
+
+Download the latest release for your platform from the [Releases](https://github.com/muhammadsami875/Highlight2Text/releases) page:
+
+| Platform | Package | Install Command |
+| -------- | ------- | --------------- |
+| Ubuntu/Debian | `Universal File Converter_0.1.0_amd64.deb` | `sudo dpkg -i Universal\ File\ Converter_0.1.0_amd64.deb` |
+| Fedora/RHEL | `Universal File Converter-0.1.0-1.x86_64.rpm` | `sudo rpm -i Universal\ File\ Converter-0.1.0-1.x86_64.rpm` |
+| Any Linux | `Universal File Converter_0.1.0_amd64.AppImage` | `chmod +x *.AppImage && ./Universal\ File\ Converter_0.1.0_amd64.AppImage` |
+| Windows | `Universal File Converter_0.1.0_x64-setup.nsis.exe` | Run the installer |
+| macOS | `Universal File Converter_0.1.0_aarch64.dmg` | Open the DMG and drag to Applications |
+
+### Uninstall
+
+```bash
+# Debian/Ubuntu
+sudo dpkg -r universal-file-converter
+
+# Fedora/RHEL
+sudo rpm -e universal-file-converter
+```
+
+## Building from Source
 
 ### Prerequisites
 
-- [Rust](https://rustup.rs/) (stable)
+- [Rust](https://rustup.rs/) (1.77+ stable)
 - [Node.js](https://nodejs.org/) 18+
-- [Tauri CLI](https://v2.tauri.app/start/prerequisites/)
+- System dependencies (Linux):
+  ```bash
+  # Ubuntu/Debian
+  sudo apt install libgtk-3-dev libwebkit2gtk-4.1-dev librsvg2-dev libsoup-3.0-dev libssl-dev patchelf
+
+  # Fedora
+  sudo dnf install gtk3-devel webkit2gtk4.1-devel librsvg2-devel libsoup3-devel openssl-devel
+  ```
 
 ### Development
 
 ```bash
 cd apps/desktop
 npm install
-npm run tauri dev
+npm run tauri:dev
 ```
 
-### Build
+### Build Installers
 
 ```bash
-npm run tauri build
+cd apps/desktop
+npm install
+
+# Build all packages for your platform
+npm run tauri:build
+
+# Or build a specific package format
+npm run tauri:build:deb       # Debian/Ubuntu .deb
+npm run tauri:build:rpm       # Fedora/RHEL .rpm
+npm run tauri:build:appimage  # Portable AppImage
 ```
+
+Output packages are in `src-tauri/target/release/bundle/`.
 
 ### Testing
 
 ```bash
-# Frontend tests
+cd apps/desktop
+
+# Frontend tests (51 tests)
 npm test
 
-# Backend tests
+# Backend tests (109 tests)
 cd src-tauri && cargo test
 ```
 
