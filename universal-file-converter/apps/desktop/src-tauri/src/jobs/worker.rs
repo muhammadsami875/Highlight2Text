@@ -59,6 +59,29 @@ async fn process_single_job(
         )
     };
 
+    if !input_path.exists() {
+        let mut q = queue.lock().await;
+        if let Some(job) = q.get_mut(job_id) {
+            job.fail(ConversionError::io_error("Input file does not exist"));
+        }
+        return;
+    }
+
+    let max_size: u64 = 2 * 1024 * 1024 * 1024;
+    if let Ok(meta) = std::fs::metadata(&input_path) {
+        if meta.len() > max_size {
+            let mut q = queue.lock().await;
+            if let Some(job) = q.get_mut(job_id) {
+                job.fail(ConversionError::validation_failed(&format!(
+                    "File too large: {} bytes (max {} bytes)",
+                    meta.len(),
+                    max_size
+                )));
+            }
+            return;
+        }
+    }
+
     let plan = planner::plan_conversion(&from, &to, registry);
     let plan = match plan {
         Some(p) => p,

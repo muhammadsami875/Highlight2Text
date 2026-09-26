@@ -21,10 +21,12 @@ impl ImageConverter {
                 input_formats: vec![
                     "png".into(), "jpg".into(), "webp".into(),
                     "bmp".into(), "tiff".into(), "gif".into(),
+                    "ico".into(),
                 ],
                 output_formats: vec![
                     "png".into(), "jpg".into(), "webp".into(),
-                    "bmp".into(), "tiff".into(),
+                    "bmp".into(), "tiff".into(), "gif".into(),
+                    "ico".into(),
                 ],
                 platforms: vec![Platform::Windows, Platform::MacOS, Platform::Linux],
                 priority: 100,
@@ -63,6 +65,8 @@ impl Converter for ImageConverter {
             "bmp" => ImageFormat::Bmp,
             "tiff" => ImageFormat::Tiff,
             "webp" => ImageFormat::WebP,
+            "gif" => ImageFormat::Gif,
+            "ico" => ImageFormat::Ico,
             other => {
                 return Err(ConversionError::unsupported(
                     &request.detected_format,

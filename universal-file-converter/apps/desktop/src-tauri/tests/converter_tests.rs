@@ -107,9 +107,9 @@ fn registry_supported_outputs_for_png() {
 fn registry_engine_status_lists_all() {
     let registry = ConverterRegistry::new();
     let status = registry.engine_status();
-    assert!(status.len() >= 9);
+    assert!(status.len() >= 10);
     let bundled_count = status.iter().filter(|e| e.available).count();
-    assert!(bundled_count >= 8);
+    assert!(bundled_count >= 9);
 }
 
 // ─── Planner tests ───
@@ -409,6 +409,47 @@ fn convert_xlsx_to_json() {
     let json_str = std::fs::read_to_string(&output).unwrap();
     let parsed: serde_json::Value = serde_json::from_str(&json_str).unwrap();
     assert!(parsed.is_array());
+}
+
+#[test]
+fn registry_finds_html_to_pdf() {
+    let registry = ConverterRegistry::new();
+    assert!(registry.is_supported("html", "pdf"));
+}
+
+#[test]
+fn convert_html_to_pdf() {
+    let job_dir = temp_job_dir();
+    let converter = converters::html_to_pdf::HtmlToPdfConverter::new();
+    let request = ConversionRequest {
+        input_path: fixture("sample.html"),
+        detected_format: "html".into(),
+        output_format: "pdf".into(),
+        output_dir: job_dir.join("output"),
+        options: default_options(),
+    };
+    let result = converter.convert(&request, &job_dir);
+    assert!(result.is_ok(), "html to pdf failed: {:?}", result.err());
+    let output = result.unwrap();
+    assert!(output.exists());
+    let contents = std::fs::read(&output).unwrap();
+    assert!(contents.starts_with(b"%PDF"));
+}
+
+#[test]
+fn convert_png_to_gif() {
+    let job_dir = temp_job_dir();
+    let converter = converters::image_convert::ImageConverter::new();
+    let request = ConversionRequest {
+        input_path: fixture("sample.png"),
+        detected_format: "png".into(),
+        output_format: "gif".into(),
+        output_dir: job_dir.join("output"),
+        options: default_options(),
+    };
+    let result = converter.convert(&request, &job_dir);
+    assert!(result.is_ok(), "png to gif failed: {:?}", result.err());
+    assert!(result.unwrap().exists());
 }
 
 #[test]

@@ -1,6 +1,7 @@
 pub mod code_highlight;
 pub mod csv_json;
 pub mod csv_xlsx;
+pub mod html_to_pdf;
 pub mod image_convert;
 pub mod image_to_pdf;
 pub mod libreoffice;
