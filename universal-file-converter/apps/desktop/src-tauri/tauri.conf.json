@@ -32,7 +32,33 @@
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
-      "icons/128x128@2x.png"
-    ]
+      "icons/128x128@2x.png",
+      "icons/icon.ico",
+      "icons/icon.icns"
+    ],
+    "category": "Utility",
+    "shortDescription": "Convert files between formats easily",
+    "longDescription": "A professional desktop application for converting files between many formats including documents, PDFs, spreadsheets, images, and code files. Supports batch conversion, format detection, and multi-step conversion planning.",
+    "copyright": "Copyright 2024 Universal File Converter",
+    "windows": {
+      "nsis": {
+        "displayLanguageSelector": true,
+        "installerIcon": "icons/icon.ico"
+      }
+    },
+    "linux": {
+      "deb": {
+        "depends": [],
+        "section": "utils"
+      },
+      "appimage": {
+        "bundleMediaFramework": false
+      }
+    }
+  },
+  "plugins": {
+    "shell": {
+      "open": true
+    }
   }
 }
