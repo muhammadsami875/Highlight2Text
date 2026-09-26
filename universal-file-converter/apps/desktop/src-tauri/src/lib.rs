@@ -24,14 +24,14 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 
 pub struct AppState {
-    pub registry: ConverterRegistry,
+    pub registry: Arc<ConverterRegistry>,
     pub job_queue: Arc<Mutex<JobQueue>>,
 }
 
 pub fn run() {
     env_logger::init();
 
-    let registry = ConverterRegistry::new();
+    let registry = Arc::new(ConverterRegistry::new());
     let job_queue = Arc::new(Mutex::new(JobQueue::new()));
 
     let state = AppState {

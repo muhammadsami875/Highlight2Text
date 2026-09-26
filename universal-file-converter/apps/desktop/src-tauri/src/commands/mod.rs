@@ -3,6 +3,7 @@ use crate::conversion::request::ConversionOptions;
 use crate::conversion::result::ConversionResult;
 use crate::detectors;
 use crate::engines::registry::EngineInfo;
+use crate::jobs::worker;
 use crate::planner;
 use crate::AppState;
 use serde::{Deserialize, Serialize};
@@ -92,8 +93,16 @@ pub async fn start_conversion(
         options,
     );
 
-    let mut queue = state.job_queue.lock().await;
-    queue.add(job);
+    {
+        let mut queue = state.job_queue.lock().await;
+        queue.add(job);
+    }
+
+    let queue = state.job_queue.clone();
+    let registry = state.registry.clone();
+    tokio::spawn(async move {
+        worker::process_queue(queue, registry).await;
+    });
 
     Ok(job_id)
 }
@@ -128,24 +137,34 @@ pub async fn retry_job(
     job_id: String,
     state: State<'_, AppState>,
 ) -> Result<String, String> {
-    let queue = state.job_queue.lock().await;
-    let job = queue
-        .get(&job_id)
-        .ok_or_else(|| format!("Job {} not found", job_id))?;
+    let new_job = {
+        let queue = state.job_queue.lock().await;
+        let job = queue
+            .get(&job_id)
+            .ok_or_else(|| format!("Job {} not found", job_id))?;
 
-    let new_id = Uuid::new_v4().to_string();
-    // Clone the job with a new ID
-    let mut new_job = job.clone();
-    new_job.id = new_id.clone();
-    new_job.status = JobStatus::Queued;
-    new_job.progress = 0.0;
-    new_job.error = None;
-    new_job.started_at = None;
-    new_job.completed_at = None;
+        let new_id = Uuid::new_v4().to_string();
+        let mut new_job = job.clone();
+        new_job.id = new_id;
+        new_job.status = JobStatus::Queued;
+        new_job.progress = 0.0;
+        new_job.error = None;
+        new_job.started_at = None;
+        new_job.completed_at = None;
+        new_job
+    };
 
-    drop(queue);
-    let mut queue = state.job_queue.lock().await;
-    queue.add(new_job);
+    let new_id = new_job.id.clone();
+    {
+        let mut queue = state.job_queue.lock().await;
+        queue.add(new_job);
+    }
+
+    let queue = state.job_queue.clone();
+    let registry = state.registry.clone();
+    tokio::spawn(async move {
+        worker::process_queue(queue, registry).await;
+    });
 
     Ok(new_id)
 }
@@ -158,38 +177,46 @@ pub async fn start_batch(
     state: State<'_, AppState>,
 ) -> Result<Vec<String>, String> {
     let mut ids = Vec::new();
-    let mut queue = state.job_queue.lock().await;
 
-    for file_entry in &files {
-        let input_path = file_entry["inputPath"]
-            .as_str()
-            .ok_or("Missing inputPath")?;
-        let output_format = file_entry["outputFormat"]
-            .as_str()
-            .ok_or("Missing outputFormat")?;
+    {
+        let mut queue = state.job_queue.lock().await;
+        for file_entry in &files {
+            let input_path = file_entry["inputPath"]
+                .as_str()
+                .ok_or("Missing inputPath")?;
+            let output_format = file_entry["outputFormat"]
+                .as_str()
+                .ok_or("Missing outputFormat")?;
 
-        let input = std::path::Path::new(input_path);
-        let detected = detectors::detect_format(input)?;
+            let input = std::path::Path::new(input_path);
+            let detected = detectors::detect_format(input)?;
 
-        let job_id = Uuid::new_v4().to_string();
-        let output_path = crate::filesystem::generate_output_filename(
-            &detected.name,
-            output_format,
-            "-converted",
-            std::path::Path::new(&output_dir),
-        );
+            let job_id = Uuid::new_v4().to_string();
+            let output_path = crate::filesystem::generate_output_filename(
+                &detected.name,
+                output_format,
+                "-converted",
+                std::path::Path::new(&output_dir),
+            );
 
-        let job = ConversionJob::new(
-            job_id.clone(),
-            detected,
-            output_format.to_string(),
-            output_path.to_string_lossy().to_string(),
-            options.clone(),
-        );
+            let job = ConversionJob::new(
+                job_id.clone(),
+                detected,
+                output_format.to_string(),
+                output_path.to_string_lossy().to_string(),
+                options.clone(),
+            );
 
-        queue.add(job);
-        ids.push(job_id);
+            queue.add(job);
+            ids.push(job_id);
+        }
     }
+
+    let queue = state.job_queue.clone();
+    let registry = state.registry.clone();
+    tokio::spawn(async move {
+        worker::process_queue(queue, registry).await;
+    });
 
     Ok(ids)
 }
