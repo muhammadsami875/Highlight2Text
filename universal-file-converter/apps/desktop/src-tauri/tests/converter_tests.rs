@@ -107,8 +107,9 @@ fn registry_supported_outputs_for_png() {
 fn registry_engine_status_lists_all() {
     let registry = ConverterRegistry::new();
     let status = registry.engine_status();
-    assert!(status.len() >= 6);
-    assert!(status.iter().all(|e| e.available));
+    assert!(status.len() >= 8);
+    let bundled_count = status.iter().filter(|e| e.available).count();
+    assert!(bundled_count >= 7);
 }
 
 // ─── Planner tests ───
@@ -312,6 +313,57 @@ fn convert_rejects_unsupported_pair() {
     let converter = converters::image_convert::ImageConverter::new();
     assert!(!converter.can_convert("pdf", "png"));
     assert!(!converter.can_convert("png", "png")); // same format
+}
+
+#[test]
+fn registry_finds_pdf_to_txt() {
+    let registry = ConverterRegistry::new();
+    assert!(registry.is_supported("pdf", "txt"));
+}
+
+#[test]
+fn registry_finds_txt_to_pdf() {
+    let registry = ConverterRegistry::new();
+    assert!(registry.is_supported("txt", "pdf"));
+    assert!(registry.is_supported("py", "pdf"));
+    assert!(registry.is_supported("rs", "pdf"));
+}
+
+#[test]
+fn convert_txt_to_pdf() {
+    let job_dir = temp_job_dir();
+    let converter = converters::text_to_pdf::TextToPdfConverter::new();
+    let request = ConversionRequest {
+        input_path: fixture("sample.txt"),
+        detected_format: "txt".into(),
+        output_format: "pdf".into(),
+        output_dir: job_dir.join("output"),
+        options: default_options(),
+    };
+    let result = converter.convert(&request, &job_dir);
+    assert!(result.is_ok());
+    let output = result.unwrap();
+    assert!(output.exists());
+    let contents = std::fs::read(&output).unwrap();
+    assert!(contents.starts_with(b"%PDF"));
+}
+
+#[test]
+fn convert_pdf_to_txt() {
+    let job_dir = temp_job_dir();
+    let converter = converters::pdf_extract::PdfTextExtractor::new();
+    let request = ConversionRequest {
+        input_path: fixture("sample_text.pdf"),
+        detected_format: "pdf".into(),
+        output_format: "txt".into(),
+        output_dir: job_dir.join("output"),
+        options: default_options(),
+    };
+    let result = converter.convert(&request, &job_dir);
+    assert!(result.is_ok());
+    let output = result.unwrap();
+    let text = std::fs::read_to_string(&output).unwrap();
+    assert!(text.contains("Hello World"));
 }
 
 #[test]

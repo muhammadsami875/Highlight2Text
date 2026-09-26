@@ -40,6 +40,9 @@ impl ConverterRegistry {
             Box::new(crate::converters::csv_json::CsvJsonConverter::new()),
             Box::new(crate::converters::csv_xlsx::CsvXlsxConverter::new()),
             Box::new(crate::converters::code_highlight::CodeHighlightConverter::new()),
+            Box::new(crate::converters::libreoffice::LibreOfficeConverter::new()),
+            Box::new(crate::converters::pdf_extract::PdfTextExtractor::new()),
+            Box::new(crate::converters::text_to_pdf::TextToPdfConverter::new()),
         ];
 
         Self { converters }
