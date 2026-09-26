@@ -3,6 +3,7 @@ import { DropZone } from "@/components/common/DropZone";
 import { FileCard } from "@/components/file/FileCard";
 import { FormatSelector } from "@/components/conversion/FormatSelector";
 import { ConversionOptionsPanel } from "@/components/conversion/ConversionOptions";
+import { ConversionPlanPreview } from "@/components/conversion/ConversionPlanPreview";
 import { ProgressBar } from "@/components/common/ProgressBar";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { useConversionStore } from "@/stores/conversionStore";
@@ -99,6 +100,10 @@ export function ConvertPage() {
 
       {inputFile && outputFormat && (
         <div className="card p-4 space-y-4">
+          <ConversionPlanPreview
+            inputFormat={inputFile.detectedFormat}
+            outputFormat={outputFormat}
+          />
           {currentJob ? (
             <div className="space-y-3">
               <div className="flex items-center justify-between">

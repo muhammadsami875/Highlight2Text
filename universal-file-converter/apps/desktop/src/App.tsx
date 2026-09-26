@@ -7,8 +7,11 @@ import { HistoryPage } from "@/pages/HistoryPage";
 import { FavoritesPage } from "@/pages/FavoritesPage";
 import { SettingsPage } from "@/pages/SettingsPage";
 import { AboutPage } from "@/pages/AboutPage";
+import { useTheme } from "@/hooks/useTheme";
 
 export default function App() {
+  useTheme();
+
   return (
     <BrowserRouter>
       <Routes>
