@@ -215,4 +215,26 @@ async fn process_single_job(
     }
 
     let _ = std::fs::remove_dir_all(&job_dir);
+
+    let q = queue.lock().await;
+    if let Some(job) = q.get(job_id) {
+        let result = crate::conversion::result::ConversionResult {
+            job_id: job.id.clone(),
+            success: job.status == JobStatus::Completed,
+            output_path: if job.status == JobStatus::Completed {
+                Some(job.output_path.clone())
+            } else {
+                None
+            },
+            output_size: if job.status == JobStatus::Completed {
+                std::fs::metadata(&job.output_path).ok().map(|m| m.len())
+            } else {
+                None
+            },
+            duration: 0,
+            warnings: job.warnings.clone(),
+            error: job.error.clone(),
+        };
+        crate::history::add_to_history(result);
+    }
 }
