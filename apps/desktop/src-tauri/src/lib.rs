@@ -53,6 +53,7 @@ pub fn run() {
         get_app_info,
         commands::import_image,
         commands::detect_document_boundary,
+        commands::apply_perspective,
     ]);
 
     #[cfg(debug_assertions)]

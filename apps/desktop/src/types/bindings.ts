@@ -33,3 +33,10 @@ export interface DetectedBoundary {
   confidence: number;
   fallback: boolean;
 }
+
+export interface WarpedPage {
+  preview_path: string;
+  width: number;
+  height: number;
+  warp_hash: string;
+}

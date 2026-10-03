@@ -1,9 +1,11 @@
 import { invoke } from "@tauri-apps/api/core";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
-import type { AppInfo, DetectedBoundary, ImportedPage } from "../types/bindings";
+import type { AppInfo, Corner, DetectedBoundary, ImportedPage, WarpedPage } from "../types/bindings";
 
-export type { AppInfo, DetectedBoundary, ImportedPage, Corner } from "../types/bindings";
+export type {
+  AppInfo, DetectedBoundary, ImportedPage, Corner, WarpedPage,
+} from "../types/bindings";
 
 export async function getAppInfo(): Promise<AppInfo> {
   return invoke<AppInfo>("get_app_info");
@@ -15,6 +17,13 @@ export async function importImage(path: string): Promise<ImportedPage> {
 
 export async function detectDocumentBoundary(path: string): Promise<DetectedBoundary> {
   return invoke<DetectedBoundary>("detect_document_boundary", { path });
+}
+
+export async function applyPerspective(
+  path: string,
+  corners: [Corner, Corner, Corner, Corner],
+): Promise<WarpedPage> {
+  return invoke<WarpedPage>("apply_perspective", { path, corners });
 }
 
 export async function pickImages(): Promise<string[]> {

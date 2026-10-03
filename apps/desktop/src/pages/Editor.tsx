@@ -3,6 +3,7 @@ import PageThumbnailStrip from "../components/PageThumbnailStrip";
 import CropEditor from "../components/CropEditor";
 import { useProject } from "../stores/projectStore";
 import {
+  applyPerspective,
   assetUrl,
   detectDocumentBoundary,
   importImage,
@@ -19,12 +20,14 @@ function formatBytes(n: number) {
 
 export default function Editor() {
   const {
-    pages, activeId, boundaries,
+    pages, activeId, boundaries, warps,
     addPages, removePage, setActive,
     setDetected, setWorking, resetBoundary,
+    setWarp, clearWarp,
   } = useProject();
   const [busy, setBusy] = useState(false);
   const [detecting, setDetecting] = useState(false);
+  const [applying, setApplying] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
 
   const importMany = useCallback(
@@ -56,6 +59,7 @@ export default function Editor() {
     [pages, activeId],
   );
   const boundary = active ? boundaries[active.id] ?? null : null;
+  const warp = active ? warps[active.id] ?? null : null;
 
   async function runDetect() {
     if (!active) return;
@@ -78,6 +82,19 @@ export default function Editor() {
       fallback: false,
     };
     setWorking(active.id, updated);
+  }
+
+  async function applyWarp() {
+    if (!active || !boundary?.working) return;
+    setApplying(true);
+    try {
+      const warped = await applyPerspective(active.source_path, boundary.working.corners);
+      setWarp(active.id, { corners: boundary.working.corners, warped });
+    } catch (e) {
+      setErrors([String((e as { message?: unknown })?.message ?? e)]);
+    } finally {
+      setApplying(false);
+    }
   }
 
   return (
@@ -111,24 +128,33 @@ export default function Editor() {
         }`}
       >
         {active ? (
-          <div className="relative inline-block max-w-full max-h-full">
+          warp ? (
             <img
-              src={assetUrl(active.preview_path)}
-              alt="page preview"
-              className="max-w-full max-h-full object-contain block select-none pointer-events-none"
+              src={assetUrl(warp.warped.preview_path)}
+              alt="warped page"
+              className="max-w-full max-h-full object-contain block select-none"
               draggable={false}
             />
-            {boundary?.working && (
-              <CropEditor
-                srcWidth={active.width}
-                srcHeight={active.height}
-                corners={boundary.working.corners}
-                confidence={boundary.working.confidence}
-                fallback={boundary.working.fallback}
-                onChange={handleCornersChange}
+          ) : (
+            <div className="relative inline-block max-w-full max-h-full">
+              <img
+                src={assetUrl(active.preview_path)}
+                alt="page preview"
+                className="max-w-full max-h-full object-contain block select-none pointer-events-none"
+                draggable={false}
               />
-            )}
-          </div>
+              {boundary?.working && (
+                <CropEditor
+                  srcWidth={active.width}
+                  srcHeight={active.height}
+                  corners={boundary.working.corners}
+                  confidence={boundary.working.confidence}
+                  fallback={boundary.working.fallback}
+                  onChange={handleCornersChange}
+                />
+              )}
+            </div>
+          )
         ) : (
           <div className="text-neutral-500 text-sm text-center max-w-sm px-6">
             Drop PNG, JPEG, TIFF, BMP, or WebP files anywhere in this window, or
@@ -185,9 +211,27 @@ export default function Editor() {
                   adjust. Self-intersecting shapes are rejected.
                 </p>
               )}
-              <p className="mt-3 text-xs text-neutral-500">
-                Apply (perspective warp) lands in Phase 6.
-              </p>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <button
+                  disabled={applying || !boundary?.working || !!warp}
+                  onClick={applyWarp}
+                  className="rounded-md bg-brand-500 hover:bg-brand-600 disabled:opacity-40 text-white text-sm py-2"
+                >
+                  {applying ? "Warping…" : warp ? "Applied" : "Apply warp"}
+                </button>
+                <button
+                  disabled={!warp}
+                  onClick={() => active && clearWarp(active.id)}
+                  className="rounded-md border border-neutral-700 hover:border-neutral-500 disabled:opacity-40 text-neutral-200 text-sm py-2"
+                >
+                  Clear warp
+                </button>
+              </div>
+              {warp && (
+                <div className="mt-2 text-xs text-neutral-400">
+                  Warped to {warp.warped.width} × {warp.warped.height}
+                </div>
+              )}
             </div>
           </>
         ) : (

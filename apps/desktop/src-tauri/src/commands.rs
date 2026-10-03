@@ -6,8 +6,9 @@ use std::path::PathBuf;
 use serde::Serialize;
 use specta::Type;
 
-use crate::document_detection::{self, DetectionError};
+use crate::document_detection::{self, DetectionError, Point};
 use crate::image_processing::{self, ImageError};
+use crate::perspective::{self, PerspectiveError};
 use crate::security::{self, SecurityError};
 
 #[derive(Debug, Serialize, Type, Clone)]
@@ -45,6 +46,9 @@ impl From<ImageError> for CommandError {
 impl From<DetectionError> for CommandError {
     fn from(e: DetectionError) -> Self { CommandError::Image(e.to_string()) }
 }
+impl From<PerspectiveError> for CommandError {
+    fn from(e: PerspectiveError) -> Self { CommandError::Image(e.to_string()) }
+}
 
 #[derive(Debug, Serialize, Type, Clone, Copy)]
 pub struct Corner { pub x: f32, pub y: f32 }
@@ -55,6 +59,37 @@ pub struct DetectedBoundary {
     pub corners: [Corner; 4],
     pub confidence: f32,
     pub fallback: bool,
+}
+
+#[derive(Debug, Serialize, Type, Clone)]
+pub struct WarpedPage {
+    pub preview_path: String,
+    pub width: u32,
+    pub height: u32,
+    pub warp_hash: String,
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn apply_perspective(
+    path: String,
+    corners: [Corner; 4],
+) -> Result<WarpedPage, CommandError> {
+    let p = PathBuf::from(&path);
+    let validated = security::validate_input_path(&p)?;
+    let pts = [
+        Point { x: corners[0].x, y: corners[0].y },
+        Point { x: corners[1].x, y: corners[1].y },
+        Point { x: corners[2].x, y: corners[2].y },
+        Point { x: corners[3].x, y: corners[3].y },
+    ];
+    let r = perspective::apply_from_path(&validated.path, &pts)?;
+    Ok(WarpedPage {
+        preview_path: r.preview_path.to_string_lossy().into(),
+        width: r.width,
+        height: r.height,
+        warp_hash: r.warp_hash,
+    })
 }
 
 #[tauri::command]
