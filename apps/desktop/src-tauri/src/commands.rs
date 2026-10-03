@@ -3,6 +3,7 @@
 
 use std::path::PathBuf;
 
+use base64::Engine;
 use serde::Serialize;
 use specta::Type;
 
@@ -142,6 +143,35 @@ pub fn export_pdf(
         .collect();
     pdf::export_pdf(&converted, &PathBuf::from(out_path), &options)?;
     Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn save_capture(data_url: String) -> Result<ImportedPage, CommandError> {
+    // Accepts "data:image/png;base64,..." or raw base64.
+    let b64 = data_url.split(',').last().unwrap_or("").to_string();
+    let bytes = base64::engine::general_purpose::STANDARD
+        .decode(b64.as_bytes())
+        .map_err(|e| CommandError::Validation(format!("bad data url: {e}")))?;
+    let dir = crate::filesystem::cache_root().join("captures");
+    std::fs::create_dir_all(&dir).map_err(|e| CommandError::Io(e.to_string()))?;
+    let out = dir.join(format!("cap-{}.png", uuid::Uuid::new_v4()));
+    std::fs::write(&out, &bytes).map_err(|e| CommandError::Io(e.to_string()))?;
+
+    let validated = security::validate_input_path(&out)?;
+    let mime = security::sniff_mime(&validated.path)?;
+    let img = image_processing::import_from_path(&validated.path)?;
+    Ok(ImportedPage {
+        id: uuid::Uuid::new_v4().to_string(),
+        source_path: img.source_path.to_string_lossy().into(),
+        mime,
+        width: img.width,
+        height: img.height,
+        byte_size: validated.size,
+        source_hash: img.source_hash,
+        preview_path: img.preview_path.to_string_lossy().into(),
+        thumbnail_path: img.thumbnail_path.to_string_lossy().into(),
+    })
 }
 
 #[tauri::command]

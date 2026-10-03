@@ -60,6 +60,7 @@ pub fn run() {
         commands::export_pdf,
         commands::export_text,
         commands::export_image,
+        commands::save_capture,
     ]);
 
     #[cfg(debug_assertions)]

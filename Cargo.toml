@@ -36,3 +36,4 @@ pdfium-render = { version = "0.8", default-features = false, features = ["image"
 printpdf = { version = "0.7", default-features = false, features = ["embedded_images"] }
 zip = { version = "2", default-features = false, features = ["deflate"] }
 tempfile = "3"
+base64 = "0.22"
