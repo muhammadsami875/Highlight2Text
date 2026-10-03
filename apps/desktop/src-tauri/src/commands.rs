@@ -7,6 +7,7 @@ use serde::Serialize;
 use specta::Type;
 
 use crate::document_detection::{self, DetectionError, Point};
+use crate::export::{self, ExportError, ImageFormatKind};
 use crate::image_processing::{self, EnhancementParams, ImageError};
 use crate::ocr::{self, OcrError, OcrOptions, OcrResult};
 use crate::pdf::{self, ExportPage, ExportWord, PdfError, PdfExportOptions};
@@ -46,6 +47,9 @@ impl From<OcrError> for CommandError {
 }
 impl From<PdfError> for CommandError {
     fn from(e: PdfError) -> Self { CommandError::Io(e.to_string()) }
+}
+impl From<ExportError> for CommandError {
+    fn from(e: ExportError) -> Self { CommandError::Io(e.to_string()) }
 }
 
 impl From<SecurityError> for CommandError {
@@ -137,6 +141,27 @@ pub fn export_pdf(
         })
         .collect();
     pdf::export_pdf(&converted, &PathBuf::from(out_path), &options)?;
+    Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn export_text(out_path: String, bodies: Vec<String>) -> Result<(), CommandError> {
+    export::write_text(&PathBuf::from(out_path), &bodies)?;
+    Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn export_image(
+    source_path: String,
+    out_path: String,
+    kind: ImageFormatKind,
+    quality: u8,
+) -> Result<(), CommandError> {
+    let p = PathBuf::from(&source_path);
+    let validated = security::validate_input_path(&p)?;
+    export::write_image(&validated.path, &PathBuf::from(out_path), kind, quality)?;
     Ok(())
 }
 

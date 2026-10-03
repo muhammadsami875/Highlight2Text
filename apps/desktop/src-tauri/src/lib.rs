@@ -58,6 +58,8 @@ pub fn run() {
         commands::run_ocr,
         commands::import_pdf,
         commands::export_pdf,
+        commands::export_text,
+        commands::export_image,
     ]);
 
     #[cfg(debug_assertions)]

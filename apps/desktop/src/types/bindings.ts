@@ -103,3 +103,5 @@ export interface PdfExportPage {
   height: number;
   words: PdfExportWord[] | null;
 }
+
+export type ImageFormatKind = "Png" | "Jpeg" | "Webp" | "Tiff";

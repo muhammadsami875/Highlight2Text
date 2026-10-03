@@ -5,12 +5,15 @@ import Editor from "./pages/Editor";
 import Ocr from "./pages/Ocr";
 import Documents from "./pages/Documents";
 import Settings from "./pages/Settings";
+import Export from "./pages/Export";
 
 const navItems = [
   { to: "/home", label: "Home" },
   { to: "/scanner", label: "Scanner" },
-  { to: "/documents", label: "Documents" },
+  { to: "/editor", label: "Editor" },
   { to: "/ocr", label: "OCR" },
+  { to: "/export", label: "Export" },
+  { to: "/documents", label: "Documents" },
   { to: "/settings", label: "Settings" },
 ];
 
@@ -47,6 +50,7 @@ export default function App() {
           <Route path="/scanner" element={<Scanner />} />
           <Route path="/editor/:projectId?" element={<Editor />} />
           <Route path="/ocr" element={<Ocr />} />
+          <Route path="/export" element={<Export />} />
           <Route path="/documents" element={<Documents />} />
           <Route path="/settings" element={<Settings />} />
         </Routes>

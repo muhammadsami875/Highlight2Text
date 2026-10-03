@@ -67,6 +67,27 @@ export async function savePdfPath(): Promise<string | null> {
   return picked ?? null;
 }
 
+export async function exportText(outPath: string, bodies: string[]): Promise<void> {
+  return invoke("export_text", { outPath, bodies });
+}
+
+export async function exportImage(
+  sourcePath: string,
+  outPath: string,
+  kind: "Png" | "Jpeg" | "Webp" | "Tiff",
+  quality: number,
+): Promise<void> {
+  return invoke("export_image", { sourcePath, outPath, kind, quality });
+}
+
+export async function savePathWith(ext: string, defaultName: string): Promise<string | null> {
+  const picked = await save({
+    defaultPath: `${defaultName}.${ext}`,
+    filters: [{ name: ext.toUpperCase(), extensions: [ext] }],
+  });
+  return picked ?? null;
+}
+
 export async function pickImages(): Promise<string[]> {
   const picked = await open({
     multiple: true,
