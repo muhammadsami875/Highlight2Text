@@ -9,6 +9,7 @@ use specta::Type;
 use crate::document_detection::{self, DetectionError, Point};
 use crate::image_processing::{self, EnhancementParams, ImageError};
 use crate::ocr::{self, OcrError, OcrOptions, OcrResult};
+use crate::pdf::{self, ExportPage, ExportWord, PdfError, PdfExportOptions};
 use crate::perspective::{self, PerspectiveError};
 use crate::security::{self, SecurityError};
 
@@ -43,6 +44,9 @@ pub enum CommandError {
 impl From<OcrError> for CommandError {
     fn from(e: OcrError) -> Self { CommandError::Ocr(e.to_string()) }
 }
+impl From<PdfError> for CommandError {
+    fn from(e: PdfError) -> Self { CommandError::Io(e.to_string()) }
+}
 
 impl From<SecurityError> for CommandError {
     fn from(e: SecurityError) -> Self { CommandError::Validation(e.to_string()) }
@@ -74,6 +78,66 @@ pub struct EnhancedPage {
     pub width: u32,
     pub height: u32,
     pub recipe_hash: String,
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn import_pdf(path: String) -> Result<Vec<ImportedPage>, CommandError> {
+    let p = PathBuf::from(&path);
+    let validated = security::validate_input_path(&p)?;
+    let previews = pdf::import_pdf(&validated.path)?;
+    Ok(previews
+        .into_iter()
+        .map(|pp| ImportedPage {
+            id: uuid::Uuid::new_v4().to_string(),
+            source_path: pp.preview_path.to_string_lossy().into(),
+            mime: "image/jpeg".into(),
+            width: pp.width,
+            height: pp.height,
+            byte_size: std::fs::metadata(&pp.preview_path).map(|m| m.len()).unwrap_or(0),
+            source_hash: pp.source_hash,
+            preview_path: pp.preview_path.to_string_lossy().into(),
+            thumbnail_path: pp.thumbnail_path.to_string_lossy().into(),
+        })
+        .collect())
+}
+
+#[derive(Debug, serde::Deserialize, Type)]
+pub struct PdfExportPage {
+    pub image_path: String,
+    pub width: u32,
+    pub height: u32,
+    pub words: Option<Vec<PdfExportWord>>,
+}
+
+#[derive(Debug, serde::Deserialize, Type)]
+pub struct PdfExportWord {
+    pub text: String,
+    pub bbox: [u32; 4],
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn export_pdf(
+    pages: Vec<PdfExportPage>,
+    out_path: String,
+    options: PdfExportOptions,
+) -> Result<(), CommandError> {
+    let converted: Vec<ExportPage> = pages
+        .into_iter()
+        .map(|p| ExportPage {
+            image_path: PathBuf::from(p.image_path),
+            width: p.width,
+            height: p.height,
+            words: p.words.map(|ws| {
+                ws.into_iter()
+                  .map(|w| ExportWord { text: w.text, bbox: w.bbox })
+                  .collect()
+            }),
+        })
+        .collect();
+    pdf::export_pdf(&converted, &PathBuf::from(out_path), &options)?;
+    Ok(())
 }
 
 #[tauri::command]

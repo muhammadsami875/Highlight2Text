@@ -80,3 +80,26 @@ export interface OcrResult {
   words: OcrWord[];
   languages: string;
 }
+
+export type PageSize = "A4" | "Letter" | "Legal" | "Original";
+export type MarginSize = "None" | "Small" | "Normal";
+export type Quality = "High" | "Balanced" | "Small";
+
+export interface PdfExportOptions {
+  page_size: PageSize;
+  margin: MarginSize;
+  quality: Quality;
+  searchable: boolean;
+}
+
+export interface PdfExportWord {
+  text: string;
+  bbox: [number, number, number, number];
+}
+
+export interface PdfExportPage {
+  image_path: string;
+  width: number;
+  height: number;
+  words: PdfExportWord[] | null;
+}

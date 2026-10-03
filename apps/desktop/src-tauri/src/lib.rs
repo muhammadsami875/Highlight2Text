@@ -56,6 +56,8 @@ pub fn run() {
         commands::apply_perspective,
         commands::apply_enhancement,
         commands::run_ocr,
+        commands::import_pdf,
+        commands::export_pdf,
     ]);
 
     #[cfg(debug_assertions)]

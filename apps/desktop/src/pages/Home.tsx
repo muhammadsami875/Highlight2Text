@@ -1,5 +1,5 @@
 import { useNavigate, Link } from "react-router-dom";
-import { importImage, pickImages } from "../services/ipc";
+import { importImage, importPdf, pickImages, pickPdf } from "../services/ipc";
 import { useProject } from "../stores/projectStore";
 
 export default function Home() {
@@ -12,22 +12,28 @@ export default function Home() {
     for (const p of paths) {
       try { results.push(await importImage(p)); } catch { /* reported in editor */ }
     }
-    if (results.length) {
-      addPages(results);
-      nav("/editor");
+    if (results.length) { addPages(results); nav("/editor"); }
+  }
+
+  async function importPdfPicker() {
+    const p = await pickPdf();
+    if (!p) return;
+    try {
+      const pages = await importPdf(p);
+      if (pages.length) { addPages(pages); nav("/editor"); }
+    } catch (e) {
+      alert(`PDF import failed: ${String((e as { message?: unknown })?.message ?? e)}`);
     }
   }
 
   return (
     <section className="p-8 max-w-5xl">
       <h1 className="text-2xl font-semibold mb-1">Welcome back</h1>
-      <p className="text-neutral-400 mb-8">
-        Scan, enhance, and extract text — fully on-device.
-      </p>
+      <p className="text-neutral-400 mb-8">Scan, enhance, and extract text — fully on-device.</p>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Tile title="Import images" desc="PNG, JPEG, TIFF, BMP, WebP." onClick={importFromPicker} />
+        <Tile title="Import PDF" desc="Opens each page as an editable image." onClick={importPdfPicker} />
         <Tile title="New scan" desc="Capture pages from your webcam (Phase 15)." disabled />
-        <Tile title="Import PDF" desc="Open and process PDF pages (Phase 11)." disabled />
         <Link
           to="/documents"
           className="rounded-xl border border-neutral-800 bg-neutral-900 p-5 hover:border-brand-500/60 transition"

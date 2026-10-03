@@ -3,13 +3,16 @@ import { convertFileSrc } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import type {
   AppInfo, Corner, DetectedBoundary, EnhancedPage, EnhancementParams,
-  ImportedPage, OcrOptions, OcrResult, WarpedPage,
+  ImportedPage, OcrOptions, OcrResult, PdfExportOptions, PdfExportPage,
+  WarpedPage,
 } from "../types/bindings";
+import { save } from "@tauri-apps/plugin-dialog";
 
 export type {
   AppInfo, DetectedBoundary, ImportedPage, Corner, WarpedPage,
   EnhancedPage, EnhancementParams, Preset, OcrOptions, OcrResult,
-  OcrWord, PageMode,
+  OcrWord, PageMode, PdfExportOptions, PdfExportPage, PageSize,
+  MarginSize, Quality,
 } from "../types/bindings";
 
 export async function getAppInfo(): Promise<AppInfo> {
@@ -40,6 +43,28 @@ export async function applyEnhancement(
 
 export async function runOcr(path: string, options: OcrOptions): Promise<OcrResult> {
   return invoke<OcrResult>("run_ocr", { path, options });
+}
+
+export async function importPdf(path: string): Promise<ImportedPage[]> {
+  return invoke<ImportedPage[]>("import_pdf", { path });
+}
+
+export async function pickPdf(): Promise<string | null> {
+  const picked = await open({ multiple: false, filters: [{ name: "PDF", extensions: ["pdf"] }] });
+  return typeof picked === "string" ? picked : null;
+}
+
+export async function exportPdf(
+  pages: PdfExportPage[],
+  outPath: string,
+  options: PdfExportOptions,
+): Promise<void> {
+  return invoke("export_pdf", { pages, outPath, options });
+}
+
+export async function savePdfPath(): Promise<string | null> {
+  const picked = await save({ defaultPath: "DocSnap.pdf", filters: [{ name: "PDF", extensions: ["pdf"] }] });
+  return picked ?? null;
 }
 
 export async function pickImages(): Promise<string[]> {

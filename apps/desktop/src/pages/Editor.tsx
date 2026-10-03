@@ -27,6 +27,7 @@ export default function Editor() {
     setDetected, setWorking, resetBoundary,
     setWarp, clearWarp,
     setEnhancement, clearEnhancement,
+    reorderPages,
   } = useProject();
   const [busy, setBusy] = useState(false);
   const [detecting, setDetecting] = useState(false);
@@ -136,6 +137,7 @@ export default function Editor() {
             activeId={activeId}
             onSelect={setActive}
             onRemove={removePage}
+            onReorder={reorderPages}
           />
         </div>
         <div className="p-2 border-t border-neutral-800">
