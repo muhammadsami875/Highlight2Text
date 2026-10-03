@@ -51,6 +51,52 @@ export default function Scanner() {
     }
   }
 
+  /// One-shot screen capture via getDisplayMedia. The OS prompts the user to
+  /// pick a screen or window; we grab a single frame and stop the track so
+  /// nothing keeps recording.
+  async function captureScreen() {
+    setBusy(true);
+    setErr(null);
+    let shot: MediaStream | null = null;
+    try {
+      shot = await (navigator.mediaDevices as MediaDevices & {
+        getDisplayMedia: (c?: DisplayMediaStreamOptions) => Promise<MediaStream>;
+      }).getDisplayMedia({ video: true, audio: false });
+      const track = shot.getVideoTracks()[0];
+      // Give the OS a frame to actually produce pixels (first frame can be blank
+      // on some backends if we read immediately).
+      await new Promise((r) => setTimeout(r, 120));
+
+      const settings = track.getSettings();
+      const w = settings.width ?? 1920;
+      const h = settings.height ?? 1080;
+
+      // Draw via a hidden <video> so we work on every browser engine Tauri
+      // might ship on (ImageCapture is still webkit-flaky).
+      const hidden = document.createElement("video");
+      hidden.autoplay = true;
+      hidden.muted = true;
+      hidden.playsInline = true;
+      hidden.srcObject = shot;
+      await hidden.play();
+      await new Promise((r) => requestAnimationFrame(() => r(null)));
+
+      const c = document.createElement("canvas");
+      c.width = hidden.videoWidth || w;
+      c.height = hidden.videoHeight || h;
+      c.getContext("2d")!.drawImage(hidden, 0, 0, c.width, c.height);
+      const dataUrl = c.toDataURL("image/png");
+
+      const page = await invoke<ImportedPage>("save_capture", { dataUrl });
+      addPages([page]);
+    } catch (e) {
+      setErr(String((e as Error)?.message ?? e));
+    } finally {
+      shot?.getTracks().forEach((t) => t.stop());
+      setBusy(false);
+    }
+  }
+
   return (
     <section className="p-6 h-full flex gap-6">
       <div className="flex-1 flex items-center justify-center bg-black rounded-lg overflow-hidden relative">
@@ -96,6 +142,17 @@ export default function Scanner() {
             {busy ? "Saving…" : "Capture"}
           </button>
         </div>
+        <button
+          disabled={busy}
+          onClick={captureScreen}
+          className="w-full rounded-md border border-neutral-700 hover:border-brand-500/60 disabled:opacity-40 text-sm py-2"
+        >
+          Capture screen / window
+        </button>
+        <p className="text-xs text-neutral-500">
+          Screen capture opens the OS picker so you choose exactly what gets
+          captured. Nothing streams in the background.
+        </p>
         <button
           onClick={() => nav("/editor")}
           className="w-full rounded-md border border-neutral-700 hover:border-brand-500/60 text-sm py-2"

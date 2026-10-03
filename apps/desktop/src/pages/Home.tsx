@@ -33,7 +33,11 @@ export default function Home() {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Tile title="Import images" desc="PNG, JPEG, TIFF, BMP, WebP." onClick={importFromPicker} />
         <Tile title="Import PDF" desc="Opens each page as an editable image." onClick={importPdfPicker} />
-        <Tile title="New scan" desc="Capture pages from your webcam (Phase 15)." disabled />
+        <Tile
+          title="Capture screen"
+          desc="Grab a screen or window and add it as a page."
+          onClick={() => nav("/scanner")}
+        />
         <Link
           to="/documents"
           className="rounded-xl border border-neutral-800 bg-neutral-900 p-5 hover:border-brand-500/60 transition"
