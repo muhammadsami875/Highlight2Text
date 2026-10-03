@@ -1,0 +1,13 @@
+{
+  "name": "docsnap-monorepo",
+  "private": true,
+  "version": "0.0.0",
+  "packageManager": "pnpm@9.0.0",
+  "scripts": {
+    "dev": "pnpm --filter docsnap-desktop dev",
+    "build": "pnpm --filter docsnap-desktop build",
+    "tauri": "pnpm --filter docsnap-desktop tauri",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck"
+  }
+}

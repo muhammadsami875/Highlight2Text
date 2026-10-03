@@ -1,0 +1,18 @@
+# Node
+node_modules/
+dist/
+.pnpm-store/
+.pnpm-debug.log*
+
+# Rust
+target/
+
+# Tauri
+apps/desktop/src-tauri/gen/
+apps/desktop/src-tauri/target/
+
+# Editor / OS
+.DS_Store
+.vscode/
+.idea/
+*.log
