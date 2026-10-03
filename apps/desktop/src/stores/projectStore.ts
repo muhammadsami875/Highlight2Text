@@ -1,14 +1,22 @@
 import { create } from "zustand";
 import type { DetectedBoundary, ImportedPage } from "../types/bindings";
 
+export interface BoundaryState {
+  detected: DetectedBoundary | null;
+  working: DetectedBoundary | null;
+  edited: boolean;
+}
+
 interface ProjectState {
   pages: ImportedPage[];
   activeId: string | null;
-  boundaries: Record<string, DetectedBoundary>;
+  boundaries: Record<string, BoundaryState>;
   addPages: (p: ImportedPage[]) => void;
   removePage: (id: string) => void;
   setActive: (id: string) => void;
-  setBoundary: (id: string, b: DetectedBoundary) => void;
+  setDetected: (id: string, b: DetectedBoundary) => void;
+  setWorking: (id: string, b: DetectedBoundary) => void;
+  resetBoundary: (id: string) => void;
   clear: () => void;
 }
 
@@ -31,7 +39,37 @@ export const useProject = create<ProjectState>((set) => ({
       return { pages, activeId, boundaries };
     }),
   setActive: (id) => set({ activeId: id }),
-  setBoundary: (id, b) =>
-    set((s) => ({ boundaries: { ...s.boundaries, [id]: b } })),
+  setDetected: (id, b) =>
+    set((s) => ({
+      boundaries: {
+        ...s.boundaries,
+        [id]: { detected: b, working: b, edited: false },
+      },
+    })),
+  setWorking: (id, b) =>
+    set((s) => {
+      const prev = s.boundaries[id];
+      return {
+        boundaries: {
+          ...s.boundaries,
+          [id]: {
+            detected: prev?.detected ?? null,
+            working: b,
+            edited: true,
+          },
+        },
+      };
+    }),
+  resetBoundary: (id) =>
+    set((s) => {
+      const prev = s.boundaries[id];
+      if (!prev?.detected) return {};
+      return {
+        boundaries: {
+          ...s.boundaries,
+          [id]: { detected: prev.detected, working: prev.detected, edited: false },
+        },
+      };
+    }),
   clear: () => set({ pages: [], activeId: null, boundaries: {} }),
 }));

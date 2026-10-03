@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import PageThumbnailStrip from "../components/PageThumbnailStrip";
-import CropOverlay from "../components/CropOverlay";
+import CropEditor from "../components/CropEditor";
 import { useProject } from "../stores/projectStore";
 import {
   assetUrl,
@@ -9,6 +9,7 @@ import {
   pickImages,
 } from "../services/ipc";
 import { useDropTarget } from "../hooks/useDropTarget";
+import type { Corner, DetectedBoundary } from "../types/bindings";
 
 function formatBytes(n: number) {
   if (n < 1024) return `${n} B`;
@@ -17,8 +18,11 @@ function formatBytes(n: number) {
 }
 
 export default function Editor() {
-  const { pages, activeId, boundaries, addPages, removePage, setActive, setBoundary } =
-    useProject();
+  const {
+    pages, activeId, boundaries,
+    addPages, removePage, setActive,
+    setDetected, setWorking, resetBoundary,
+  } = useProject();
   const [busy, setBusy] = useState(false);
   const [detecting, setDetecting] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
@@ -51,19 +55,29 @@ export default function Editor() {
     () => pages.find((p) => p.id === activeId) ?? null,
     [pages, activeId],
   );
-  const activeBoundary = active ? boundaries[active.id] ?? null : null;
+  const boundary = active ? boundaries[active.id] ?? null : null;
 
-  async function detectActive() {
+  async function runDetect() {
     if (!active) return;
     setDetecting(true);
     try {
       const b = await detectDocumentBoundary(active.source_path);
-      setBoundary(active.id, b);
+      setDetected(active.id, b);
     } catch (e) {
       setErrors([String((e as { message?: unknown })?.message ?? e)]);
     } finally {
       setDetecting(false);
     }
+  }
+
+  function handleCornersChange(next: [Corner, Corner, Corner, Corner]) {
+    if (!active || !boundary?.working) return;
+    const updated: DetectedBoundary = {
+      ...boundary.working,
+      corners: next,
+      fallback: false,
+    };
+    setWorking(active.id, updated);
   }
 
   return (
@@ -101,15 +115,17 @@ export default function Editor() {
             <img
               src={assetUrl(active.preview_path)}
               alt="page preview"
-              className="max-w-full max-h-full object-contain block"
+              className="max-w-full max-h-full object-contain block select-none pointer-events-none"
+              draggable={false}
             />
-            {activeBoundary && (
-              <CropOverlay
+            {boundary?.working && (
+              <CropEditor
                 srcWidth={active.width}
                 srcHeight={active.height}
-                corners={activeBoundary.corners}
-                confidence={activeBoundary.confidence}
-                fallback={activeBoundary.fallback}
+                corners={boundary.working.corners}
+                confidence={boundary.working.confidence}
+                fallback={boundary.working.fallback}
+                onChange={handleCornersChange}
               />
             )}
           </div>
@@ -133,30 +149,44 @@ export default function Editor() {
               <Row k="Type">{active.mime}</Row>
               <Row k="Dimensions">{active.width} × {active.height}</Row>
               <Row k="Size">{formatBytes(active.byte_size)}</Row>
-              <Row k="Hash">
-                <span className="font-mono text-xs">{active.source_hash.slice(0, 16)}…</span>
-              </Row>
             </dl>
 
             <div className="mt-5">
               <div className="text-xs uppercase tracking-wide text-neutral-500 mb-2">
-                Document detection
+                Crop
               </div>
-              <button
-                disabled={detecting}
-                onClick={detectActive}
-                className="w-full rounded-md border border-neutral-700 hover:border-brand-500/60 disabled:opacity-50 text-neutral-200 text-sm py-2"
-              >
-                {detecting ? "Detecting…" : activeBoundary ? "Re-detect" : "Auto-detect boundary"}
-              </button>
-              {activeBoundary && (
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  disabled={detecting}
+                  onClick={runDetect}
+                  className="rounded-md border border-neutral-700 hover:border-brand-500/60 disabled:opacity-50 text-neutral-200 text-sm py-2"
+                >
+                  {detecting ? "Detecting…" : boundary ? "Re-detect" : "Auto-detect"}
+                </button>
+                <button
+                  disabled={!boundary?.edited}
+                  onClick={() => active && resetBoundary(active.id)}
+                  className="rounded-md border border-neutral-700 hover:border-neutral-500 disabled:opacity-40 text-neutral-200 text-sm py-2"
+                >
+                  Reset
+                </button>
+              </div>
+              {boundary?.working && (
                 <div className="mt-2 text-xs text-neutral-400">
-                  Confidence {Math.round(activeBoundary.confidence * 100)}%
-                  {activeBoundary.fallback && " · fallback bounding box"}
+                  {boundary.edited
+                    ? "Manually adjusted."
+                    : `Auto-detected · ${Math.round(boundary.working.confidence * 100)}% confidence`}
+                  {boundary.working.fallback && !boundary.edited && " · fallback"}
                 </div>
               )}
-              <p className="mt-2 text-xs text-neutral-500">
-                Manual corner adjustment lands in Phase 5.
+              {!boundary && (
+                <p className="mt-2 text-xs text-neutral-500">
+                  Run auto-detect to place the four corners; drag any corner to
+                  adjust. Self-intersecting shapes are rejected.
+                </p>
+              )}
+              <p className="mt-3 text-xs text-neutral-500">
+                Apply (perspective warp) lands in Phase 6.
               </p>
             </div>
           </>
