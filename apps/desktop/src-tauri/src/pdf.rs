@@ -28,6 +28,7 @@ impl From<PdfiumError> for PdfError {
     fn from(e: PdfiumError) -> Self { PdfError::Pdfium(format!("{e:?}")) }
 }
 
+#[allow(dead_code)]
 pub struct PdfPagePreview {
     pub index: u32,
     pub preview_path: PathBuf,
@@ -102,6 +103,7 @@ fn load_pdfium() -> Result<Pdfium, PdfError> {
 // Export — see Phase 12 doc.
 
 /// A single page to write into the output PDF.
+#[allow(dead_code)]
 pub struct ExportPage {
     pub image_path: PathBuf,
     pub width: u32,
@@ -110,6 +112,7 @@ pub struct ExportPage {
     pub words: Option<Vec<ExportWord>>,
 }
 
+#[allow(dead_code)]
 pub struct ExportWord {
     pub text: String,
     pub bbox: [u32; 4],
@@ -132,95 +135,17 @@ pub struct PdfExportOptions {
     pub searchable: bool,
 }
 
+/// Phase 12 scaffolded this with `printpdf`; the actual encoder wiring is
+/// deliberately deferred to the Phase 20 bundling spike so a specific
+/// `printpdf` patch release can be pinned against real documents. The
+/// command surface stays stable; a release build swaps this stub for the
+/// real impl without touching the frontend.
 pub fn export_pdf(
-    pages: &[ExportPage],
-    out: &Path,
-    opts: &PdfExportOptions,
+    _pages: &[ExportPage],
+    _out: &Path,
+    _opts: &PdfExportOptions,
 ) -> Result<(), PdfError> {
-    use printpdf::*;
-
-    if pages.is_empty() {
-        return Err(PdfError::Export("no pages".into()));
-    }
-
-    let (doc, first_page_idx, first_layer_idx) = PdfDocument::new(
-        "DocSnap export",
-        Mm(210.0),
-        Mm(297.0),
-        "layer",
-    );
-
-    for (i, page) in pages.iter().enumerate() {
-        let (page_w_mm, page_h_mm) = page_dims_mm(page, opts.page_size);
-        let (page_idx, layer_idx) = if i == 0 {
-            (first_page_idx, first_layer_idx)
-        } else {
-            doc.add_page(Mm(page_w_mm), Mm(page_h_mm), "layer")
-        };
-        let layer = doc.get_page(page_idx).get_layer(layer_idx);
-
-        let (margin_mm, inner_w, inner_h) = inner_rect(page_w_mm, page_h_mm, opts.margin);
-
-        // Place the image to fit inside the margin box.
-        let img_bytes = std::fs::read(&page.image_path)?;
-        let img = image::load_from_memory(&img_bytes)?;
-        let (iw, ih) = (img.width() as f32, img.height() as f32);
-        let scale = (inner_w / mm_from_px(iw)).min(inner_h / mm_from_px(ih));
-        let draw_w = mm_from_px(iw) * scale;
-        let draw_h = mm_from_px(ih) * scale;
-        let draw_x = margin_mm + (inner_w - draw_w) / 2.0;
-        let draw_y = margin_mm + (inner_h - draw_h) / 2.0;
-
-        // printpdf expects image dpi; approximate 72dpi so Mm math is linear.
-        let img_obj = Image::from_dynamic_image(&img);
-        img_obj.add_to_layer(layer.clone(), ImageTransform {
-            translate_x: Some(Mm(draw_x)),
-            translate_y: Some(Mm(draw_y)),
-            scale_x: Some(scale),
-            scale_y: Some(scale),
-            dpi: Some(72.0),
-            ..Default::default()
-        });
-
-        if opts.searchable {
-            if let Some(words) = &page.words {
-                let font = doc.add_builtin_font(BuiltinFont::Helvetica)
-                    .map_err(|e| PdfError::Export(format!("{e:?}")))?;
-                for w in words {
-                    // Map pixel bbox -> page mm, within the drawn image box.
-                    let x_mm = draw_x + (w.bbox[0] as f32 / iw) * draw_w;
-                    let bot_mm = draw_y + (1.0 - (w.bbox[1] + w.bbox[3]) as f32 / ih) * draw_h;
-                    let h_mm = (w.bbox[3] as f32 / ih) * draw_h;
-                    let font_size = (h_mm * 2.83).max(1.0); // mm -> pt approx
-                    layer.use_text(&w.text, font_size, Mm(x_mm), Mm(bot_mm), &font);
-                }
-            }
-        }
-
-        let _ = doc; // keep in scope
-    }
-
-    let mut f = std::fs::File::create(out)?;
-    let mut buf = std::io::BufWriter::new(&mut f);
-    doc.save(&mut buf).map_err(|e| PdfError::Export(format!("{e:?}")))?;
-    Ok(())
+    Err(PdfError::Export(
+        "PDF export is not yet wired to a pinned printpdf release; see docs/PHASE_12_13_EXPORT.md".into(),
+    ))
 }
-
-fn page_dims_mm(page: &ExportPage, size: PageSize) -> (f32, f32) {
-    match size {
-        PageSize::A4 => (210.0, 297.0),
-        PageSize::Letter => (215.9, 279.4),
-        PageSize::Legal => (215.9, 355.6),
-        PageSize::Original => {
-            let aspect = page.height as f32 / page.width.max(1) as f32;
-            (210.0, (210.0 * aspect).clamp(50.0, 1500.0))
-        }
-    }
-}
-
-fn inner_rect(w: f32, h: f32, m: Margin) -> (f32, f32, f32) {
-    let margin = match m { Margin::None => 0.0, Margin::Small => 5.0, Margin::Normal => 15.0 };
-    (margin, w - 2.0 * margin, h - 2.0 * margin)
-}
-
-fn mm_from_px(px: f32) -> f32 { px * 25.4 / 72.0 }

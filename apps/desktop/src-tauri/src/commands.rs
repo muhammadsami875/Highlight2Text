@@ -70,7 +70,7 @@ impl From<PerspectiveError> for CommandError {
     fn from(e: PerspectiveError) -> Self { CommandError::Image(e.to_string()) }
 }
 
-#[derive(Debug, Serialize, Type, Clone, Copy)]
+#[derive(Debug, Serialize, serde::Deserialize, Type, Clone, Copy)]
 pub struct Corner { pub x: f32, pub y: f32 }
 
 #[derive(Debug, Serialize, Type, Clone)]

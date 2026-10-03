@@ -9,7 +9,7 @@ license = "Apache-2.0"
 rust-version = "1.77"
 
 [workspace.dependencies]
-tauri = { version = "2", features = [] }
+tauri = { version = "2", features = ["protocol-asset"] }
 tauri-build = { version = "2" }
 tauri-plugin-dialog = "2"
 tauri-plugin-fs = "2"
@@ -32,8 +32,10 @@ hex = "0.4"
 dirs = "5"
 imageproc = "0.25"
 which = "6"
-pdfium-render = { version = "0.8", default-features = false, features = ["image", "thread_safe"] }
-printpdf = { version = "0.7", default-features = false, features = ["embedded_images"] }
+pdfium-render = { version = "0.8", default-features = false, features = ["image", "thread_safe", "pdfium_latest"] }
+# printpdf is intentionally not bound yet: its 0.7 API varies across patch
+# releases and we validate it as part of the Phase 20 bundling spike.
+# When reintroducing, pin a specific version and wire export_pdf.
 zip = { version = "2", default-features = false, features = ["deflate"] }
 tempfile = "3"
 base64 = "0.22"

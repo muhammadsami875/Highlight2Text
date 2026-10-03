@@ -16,3 +16,4 @@ apps/desktop/src-tauri/target/
 .vscode/
 .idea/
 *.log
+apps/desktop/dist/

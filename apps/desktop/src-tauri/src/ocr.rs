@@ -22,6 +22,7 @@ pub enum OcrError {
     #[error("io: {0}")]
     Io(#[from] std::io::Error),
     #[error("invalid utf-8 from engine")]
+    #[allow(dead_code)]
     Utf8,
 }
 

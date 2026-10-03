@@ -3,7 +3,6 @@
 use std::path::Path;
 
 use image::ImageFormat;
-use serde::Serialize;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -16,27 +15,15 @@ pub enum ExportError {
     Serde(#[from] serde_json::Error),
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Clone, Copy, serde::Deserialize, serde::Serialize, specta::Type)]
 pub enum TextFormat { Txt, Json, Csv }
 
 #[derive(Debug, Clone, Copy, serde::Deserialize, serde::Serialize, specta::Type)]
 pub enum ImageFormatKind { Png, Jpeg, Webp, Tiff }
 
-#[derive(Debug, Serialize)]
-pub struct JsonPage<'a> {
-    pub page: usize,
-    pub text: &'a str,
-    pub languages: &'a str,
-    pub words: &'a [JsonWord<'a>],
-}
-
-#[derive(Debug, Serialize)]
-pub struct JsonWord<'a> {
-    pub text: &'a str,
-    pub bbox: [u32; 4],
-    pub confidence: f32,
-    pub line: u32,
-}
+// JsonPage / JsonWord shapes are reserved for Phase 13's JSON exporter once
+// it has UI; kept out of the compiled surface until then.
 
 pub fn write_text(out: &Path, bodies: &[String]) -> Result<(), ExportError> {
     let joined = bodies.join("\n\n\u{000C}\n\n"); // form-feed between pages

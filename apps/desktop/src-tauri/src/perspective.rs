@@ -9,7 +9,7 @@
 
 use std::path::{Path, PathBuf};
 
-use image::{DynamicImage, GenericImageView, ImageBuffer, ImageFormat, Rgb, RgbImage};
+use image::{DynamicImage, ImageBuffer, ImageFormat, Rgb, RgbImage};
 use sha2::{Digest, Sha256};
 
 use crate::document_detection::Point;

@@ -51,8 +51,10 @@ pub struct Page {
     pub rotation: i32,
     pub corners: Option<[[f32; 2]; 4]>,
     pub warp_target: Option<[u32; 2]>,
-    pub enhancement: Option<serde_json::Value>,
-    pub ocr: Option<serde_json::Value>,
+    /// Opaque JSON payloads stored as strings so specta's type export stays
+    /// simple. Round-tripped through the frontend as `string | null`.
+    pub enhancement: Option<String>,
+    pub ocr: Option<String>,
 }
 
 pub fn save(path: &Path, project: &Project) -> Result<(), ProjectError> {
@@ -68,7 +70,7 @@ pub fn save(path: &Path, project: &Project) -> Result<(), ProjectError> {
         for page in &project.pages {
             if let Some(ocr) = &page.ocr {
                 zip.start_file(format!("ocr/{}.json", page.id), opts)?;
-                zip.write_all(serde_json::to_vec_pretty(ocr)?.as_slice())?;
+                zip.write_all(ocr.as_bytes())?;
             }
         }
         zip.finish()?;

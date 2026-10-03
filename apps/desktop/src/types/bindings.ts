@@ -129,6 +129,6 @@ export interface ProjectPage {
   rotation: number;
   corners: [[number, number], [number, number], [number, number], [number, number]] | null;
   warp_target: [number, number] | null;
-  enhancement: unknown | null;
-  ocr: unknown | null;
+  enhancement: string | null;
+  ocr: string | null;
 }

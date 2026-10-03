@@ -26,8 +26,9 @@ export default function Documents() {
       rotation: 0,
       corners: (boundaries[p.id]?.working?.corners ?? null) as ProjectPage["corners"],
       warp_target: warps[p.id] ? [warps[p.id]!.warped.width, warps[p.id]!.warped.height] : null,
-      enhancement: enhancements[p.id]?.params ?? null,
-      ocr: ocrResults[p.id] ?? null,
+      // Opaque JSON payloads; the Rust side stores them verbatim.
+      enhancement: enhancements[p.id]?.params ? JSON.stringify(enhancements[p.id]!.params) : null,
+      ocr: ocrResults[p.id] ? JSON.stringify(ocrResults[p.id]) : null,
     }));
     try { await saveProject(name, projectPages); await refresh(); }
     catch (e) { setErr(String((e as Error).message ?? e)); }

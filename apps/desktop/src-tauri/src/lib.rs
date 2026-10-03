@@ -41,13 +41,7 @@ fn get_app_info() -> AppInfo {
 }
 
 pub fn run() {
-    tracing_subscriber::fmt()
-        .with_env_filter(
-            tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info")),
-        )
-        .try_init()
-        .ok();
+    tracing_subscriber::fmt().try_init().ok();
 
     let builder = Builder::<tauri::Wry>::new().commands(collect_commands![
         get_app_info,
