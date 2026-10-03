@@ -55,6 +55,7 @@ pub fn run() {
         commands::detect_document_boundary,
         commands::apply_perspective,
         commands::apply_enhancement,
+        commands::run_ocr,
     ]);
 
     #[cfg(debug_assertions)]

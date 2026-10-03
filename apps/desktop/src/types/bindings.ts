@@ -59,3 +59,24 @@ export interface EnhancedPage {
   height: number;
   recipe_hash: string;
 }
+
+export type PageMode =
+  | "Auto" | "SingleBlock" | "MultiBlock" | "SingleLine" | "SparseText" | "Table";
+
+export interface OcrOptions {
+  languages: string;
+  mode: PageMode;
+}
+
+export interface OcrWord {
+  text: string;
+  bbox: [number, number, number, number];
+  confidence: number;
+  line: number;
+}
+
+export interface OcrResult {
+  text: string;
+  words: OcrWord[];
+  languages: string;
+}

@@ -3,12 +3,13 @@ import { convertFileSrc } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import type {
   AppInfo, Corner, DetectedBoundary, EnhancedPage, EnhancementParams,
-  ImportedPage, WarpedPage,
+  ImportedPage, OcrOptions, OcrResult, WarpedPage,
 } from "../types/bindings";
 
 export type {
   AppInfo, DetectedBoundary, ImportedPage, Corner, WarpedPage,
-  EnhancedPage, EnhancementParams, Preset,
+  EnhancedPage, EnhancementParams, Preset, OcrOptions, OcrResult,
+  OcrWord, PageMode,
 } from "../types/bindings";
 
 export async function getAppInfo(): Promise<AppInfo> {
@@ -35,6 +36,10 @@ export async function applyEnhancement(
   params: EnhancementParams,
 ): Promise<EnhancedPage> {
   return invoke<EnhancedPage>("apply_enhancement", { path, params });
+}
+
+export async function runOcr(path: string, options: OcrOptions): Promise<OcrResult> {
+  return invoke<OcrResult>("run_ocr", { path, options });
 }
 
 export async function pickImages(): Promise<string[]> {

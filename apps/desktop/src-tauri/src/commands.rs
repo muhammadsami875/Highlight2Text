@@ -8,6 +8,7 @@ use specta::Type;
 
 use crate::document_detection::{self, DetectionError, Point};
 use crate::image_processing::{self, EnhancementParams, ImageError};
+use crate::ocr::{self, OcrError, OcrOptions, OcrResult};
 use crate::perspective::{self, PerspectiveError};
 use crate::security::{self, SecurityError};
 
@@ -35,6 +36,12 @@ pub enum CommandError {
     Image(String),
     #[error("io: {0}")]
     Io(String),
+    #[error("ocr: {0}")]
+    Ocr(String),
+}
+
+impl From<OcrError> for CommandError {
+    fn from(e: OcrError) -> Self { CommandError::Ocr(e.to_string()) }
 }
 
 impl From<SecurityError> for CommandError {
@@ -67,6 +74,15 @@ pub struct EnhancedPage {
     pub width: u32,
     pub height: u32,
     pub recipe_hash: String,
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn run_ocr(path: String, options: OcrOptions) -> Result<OcrResult, CommandError> {
+    let p = PathBuf::from(&path);
+    let validated = security::validate_input_path(&p)?;
+    let r = ocr::recognize(&validated.path, &options)?;
+    Ok(r)
 }
 
 #[tauri::command]

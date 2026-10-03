@@ -5,6 +5,7 @@ import type {
   EnhancedPage,
   EnhancementParams,
   ImportedPage,
+  OcrResult,
   WarpedPage,
 } from "../types/bindings";
 
@@ -41,6 +42,7 @@ interface ProjectState {
   boundaries: Record<string, BoundaryState>;
   warps: Record<string, WarpRecipe>;
   enhancements: Record<string, EnhancementRecipe>;
+  ocrResults: Record<string, OcrResult>;
   addPages: (p: ImportedPage[]) => void;
   removePage: (id: string) => void;
   setActive: (id: string) => void;
@@ -51,6 +53,12 @@ interface ProjectState {
   clearWarp: (id: string) => void;
   setEnhancement: (id: string, e: EnhancementRecipe) => void;
   clearEnhancement: (id: string) => void;
+  setOcr: (id: string, r: OcrResult) => void;
+  updateOcrText: (id: string, text: string) => void;
+  clearOcr: (id: string) => void;
+  reorderPages: (from: number, to: number) => void;
+  rotatePage: (id: string) => void;
+  renamePage: (id: string, name: string) => void;
   clear: () => void;
 }
 
@@ -60,6 +68,7 @@ export const useProject = create<ProjectState>((set) => ({
   boundaries: {},
   warps: {},
   enhancements: {},
+  ocrResults: {},
   addPages: (incoming) =>
     set((s) => {
       const existing = new Set(s.pages.map((p) => p.source_hash));
@@ -74,7 +83,8 @@ export const useProject = create<ProjectState>((set) => ({
       const { [id]: _rb, ...boundaries } = s.boundaries;
       const { [id]: _rw, ...warps } = s.warps;
       const { [id]: _re, ...enhancements } = s.enhancements;
-      return { pages, activeId, boundaries, warps, enhancements };
+      const { [id]: _ro, ...ocrResults } = s.ocrResults;
+      return { pages, activeId, boundaries, warps, enhancements, ocrResults };
     }),
   setActive: (id) => set({ activeId: id }),
   setDetected: (id, b) =>
@@ -122,7 +132,30 @@ export const useProject = create<ProjectState>((set) => ({
       const { [id]: _r, ...enhancements } = s.enhancements;
       return { enhancements };
     }),
+  setOcr: (id, r) => set((s) => ({ ocrResults: { ...s.ocrResults, [id]: r } })),
+  updateOcrText: (id, text) =>
+    set((s) => {
+      const prev = s.ocrResults[id];
+      if (!prev) return {};
+      return { ocrResults: { ...s.ocrResults, [id]: { ...prev, text } } };
+    }),
+  clearOcr: (id) =>
+    set((s) => {
+      const { [id]: _r, ...ocrResults } = s.ocrResults;
+      return { ocrResults };
+    }),
+  reorderPages: (from, to) =>
+    set((s) => {
+      if (from === to) return {};
+      const pages = s.pages.slice();
+      const [moved] = pages.splice(from, 1);
+      pages.splice(Math.max(0, Math.min(pages.length, to)), 0, moved);
+      return { pages };
+    }),
+  rotatePage: (_id) => ({}),
+  renamePage: (_id, _name) => ({}),
   clear: () => set({
     pages: [], activeId: null, boundaries: {}, warps: {}, enhancements: {},
+    ocrResults: {},
   }),
 }));
