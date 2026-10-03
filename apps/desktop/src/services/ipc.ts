@@ -1,10 +1,14 @@
 import { invoke } from "@tauri-apps/api/core";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
-import type { AppInfo, Corner, DetectedBoundary, ImportedPage, WarpedPage } from "../types/bindings";
+import type {
+  AppInfo, Corner, DetectedBoundary, EnhancedPage, EnhancementParams,
+  ImportedPage, WarpedPage,
+} from "../types/bindings";
 
 export type {
   AppInfo, DetectedBoundary, ImportedPage, Corner, WarpedPage,
+  EnhancedPage, EnhancementParams, Preset,
 } from "../types/bindings";
 
 export async function getAppInfo(): Promise<AppInfo> {
@@ -24,6 +28,13 @@ export async function applyPerspective(
   corners: [Corner, Corner, Corner, Corner],
 ): Promise<WarpedPage> {
   return invoke<WarpedPage>("apply_perspective", { path, corners });
+}
+
+export async function applyEnhancement(
+  path: string,
+  params: EnhancementParams,
+): Promise<EnhancedPage> {
+  return invoke<EnhancedPage>("apply_enhancement", { path, params });
 }
 
 export async function pickImages(): Promise<string[]> {

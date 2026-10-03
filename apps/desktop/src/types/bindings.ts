@@ -40,3 +40,22 @@ export interface WarpedPage {
   height: number;
   warp_hash: string;
 }
+
+export type Preset =
+  | "Original" | "Color" | "Auto" | "Document"
+  | "BlackWhite" | "Grayscale" | "HighContrast";
+
+export interface EnhancementParams {
+  preset: Preset;
+  brightness: number;
+  contrast: number;
+  sharpness: number;
+  shadow_remove: number;
+}
+
+export interface EnhancedPage {
+  preview_path: string;
+  width: number;
+  height: number;
+  recipe_hash: string;
+}

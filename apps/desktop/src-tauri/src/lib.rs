@@ -54,6 +54,7 @@ pub fn run() {
         commands::import_image,
         commands::detect_document_boundary,
         commands::apply_perspective,
+        commands::apply_enhancement,
     ]);
 
     #[cfg(debug_assertions)]

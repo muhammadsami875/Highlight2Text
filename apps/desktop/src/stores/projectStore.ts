@@ -2,6 +2,8 @@ import { create } from "zustand";
 import type {
   Corner,
   DetectedBoundary,
+  EnhancedPage,
+  EnhancementParams,
   ImportedPage,
   WarpedPage,
 } from "../types/bindings";
@@ -20,11 +22,25 @@ export interface WarpRecipe {
   warped: WarpedPage;
 }
 
+export interface EnhancementRecipe {
+  params: EnhancementParams;
+  rendered: EnhancedPage;
+}
+
+export const defaultEnhancement = (): EnhancementParams => ({
+  preset: "Original",
+  brightness: 0,
+  contrast: 0,
+  sharpness: 0,
+  shadow_remove: 0,
+});
+
 interface ProjectState {
   pages: ImportedPage[];
   activeId: string | null;
   boundaries: Record<string, BoundaryState>;
   warps: Record<string, WarpRecipe>;
+  enhancements: Record<string, EnhancementRecipe>;
   addPages: (p: ImportedPage[]) => void;
   removePage: (id: string) => void;
   setActive: (id: string) => void;
@@ -33,6 +49,8 @@ interface ProjectState {
   resetBoundary: (id: string) => void;
   setWarp: (id: string, w: WarpRecipe) => void;
   clearWarp: (id: string) => void;
+  setEnhancement: (id: string, e: EnhancementRecipe) => void;
+  clearEnhancement: (id: string) => void;
   clear: () => void;
 }
 
@@ -41,6 +59,7 @@ export const useProject = create<ProjectState>((set) => ({
   activeId: null,
   boundaries: {},
   warps: {},
+  enhancements: {},
   addPages: (incoming) =>
     set((s) => {
       const existing = new Set(s.pages.map((p) => p.source_hash));
@@ -54,7 +73,8 @@ export const useProject = create<ProjectState>((set) => ({
       const activeId = s.activeId === id ? pages[0]?.id ?? null : s.activeId;
       const { [id]: _rb, ...boundaries } = s.boundaries;
       const { [id]: _rw, ...warps } = s.warps;
-      return { pages, activeId, boundaries, warps };
+      const { [id]: _re, ...enhancements } = s.enhancements;
+      return { pages, activeId, boundaries, warps, enhancements };
     }),
   setActive: (id) => set({ activeId: id }),
   setDetected: (id, b) =>
@@ -95,5 +115,14 @@ export const useProject = create<ProjectState>((set) => ({
       const { [id]: _r, ...warps } = s.warps;
       return { warps };
     }),
-  clear: () => set({ pages: [], activeId: null, boundaries: {}, warps: {} }),
+  setEnhancement: (id, e) =>
+    set((s) => ({ enhancements: { ...s.enhancements, [id]: e } })),
+  clearEnhancement: (id) =>
+    set((s) => {
+      const { [id]: _r, ...enhancements } = s.enhancements;
+      return { enhancements };
+    }),
+  clear: () => set({
+    pages: [], activeId: null, boundaries: {}, warps: {}, enhancements: {},
+  }),
 }));

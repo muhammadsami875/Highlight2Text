@@ -1,8 +1,10 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import PageThumbnailStrip from "../components/PageThumbnailStrip";
 import CropEditor from "../components/CropEditor";
-import { useProject } from "../stores/projectStore";
+import EnhancementPanel from "../components/EnhancementPanel";
+import { defaultEnhancement, useProject } from "../stores/projectStore";
 import {
+  applyEnhancement,
   applyPerspective,
   assetUrl,
   detectDocumentBoundary,
@@ -10,7 +12,7 @@ import {
   pickImages,
 } from "../services/ipc";
 import { useDropTarget } from "../hooks/useDropTarget";
-import type { Corner, DetectedBoundary } from "../types/bindings";
+import type { Corner, DetectedBoundary, EnhancementParams } from "../types/bindings";
 
 function formatBytes(n: number) {
   if (n < 1024) return `${n} B`;
@@ -20,10 +22,11 @@ function formatBytes(n: number) {
 
 export default function Editor() {
   const {
-    pages, activeId, boundaries, warps,
+    pages, activeId, boundaries, warps, enhancements,
     addPages, removePage, setActive,
     setDetected, setWorking, resetBoundary,
     setWarp, clearWarp,
+    setEnhancement, clearEnhancement,
   } = useProject();
   const [busy, setBusy] = useState(false);
   const [detecting, setDetecting] = useState(false);
@@ -60,6 +63,30 @@ export default function Editor() {
   );
   const boundary = active ? boundaries[active.id] ?? null : null;
   const warp = active ? warps[active.id] ?? null : null;
+  const enhancement = active ? enhancements[active.id] ?? null : null;
+
+  // Transient enhancement draft (debounced -> backend).
+  const [draft, setDraft] = useState<EnhancementParams | null>(null);
+  const draftTimer = useRef<number | null>(null);
+  useEffect(() => {
+    setDraft(enhancement?.params ?? null);
+  }, [active?.id, enhancement?.params]);
+
+  const effectiveSourceForEnh = warp?.warped.preview_path ?? active?.source_path ?? null;
+
+  function scheduleEnhancement(next: EnhancementParams) {
+    setDraft(next);
+    if (!active || !effectiveSourceForEnh) return;
+    if (draftTimer.current) window.clearTimeout(draftTimer.current);
+    draftTimer.current = window.setTimeout(async () => {
+      try {
+        const rendered = await applyEnhancement(effectiveSourceForEnh, next);
+        setEnhancement(active.id, { params: next, rendered });
+      } catch (e) {
+        setErrors([String((e as { message?: unknown })?.message ?? e)]);
+      }
+    }, 180);
+  }
 
   async function runDetect() {
     if (!active) return;
@@ -128,7 +155,14 @@ export default function Editor() {
         }`}
       >
         {active ? (
-          warp ? (
+          enhancement ? (
+            <img
+              src={assetUrl(enhancement.rendered.preview_path)}
+              alt="enhanced page"
+              className="max-w-full max-h-full object-contain block select-none"
+              draggable={false}
+            />
+          ) : warp ? (
             <img
               src={assetUrl(warp.warped.preview_path)}
               alt="warped page"
@@ -232,6 +266,27 @@ export default function Editor() {
                   Warped to {warp.warped.width} × {warp.warped.height}
                 </div>
               )}
+            </div>
+
+            <div className="mt-5">
+              <div className="flex items-center justify-between mb-2">
+                <div className="text-xs uppercase tracking-wide text-neutral-500">
+                  Enhancement
+                </div>
+                {enhancement && (
+                  <button
+                    onClick={() => active && clearEnhancement(active.id)}
+                    className="text-xs text-neutral-400 hover:text-neutral-200"
+                  >
+                    Reset
+                  </button>
+                )}
+              </div>
+              <EnhancementPanel
+                params={draft ?? defaultEnhancement()}
+                onChange={scheduleEnhancement}
+                disabled={!active}
+              />
             </div>
           </>
         ) : (

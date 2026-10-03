@@ -7,7 +7,7 @@ use serde::Serialize;
 use specta::Type;
 
 use crate::document_detection::{self, DetectionError, Point};
-use crate::image_processing::{self, ImageError};
+use crate::image_processing::{self, EnhancementParams, ImageError};
 use crate::perspective::{self, PerspectiveError};
 use crate::security::{self, SecurityError};
 
@@ -59,6 +59,31 @@ pub struct DetectedBoundary {
     pub corners: [Corner; 4],
     pub confidence: f32,
     pub fallback: bool,
+}
+
+#[derive(Debug, Serialize, Type, Clone)]
+pub struct EnhancedPage {
+    pub preview_path: String,
+    pub width: u32,
+    pub height: u32,
+    pub recipe_hash: String,
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn apply_enhancement(
+    path: String,
+    params: EnhancementParams,
+) -> Result<EnhancedPage, CommandError> {
+    let p = PathBuf::from(&path);
+    let validated = security::validate_input_path(&p)?;
+    let r = image_processing::apply_enhancement(&validated.path, &params)?;
+    Ok(EnhancedPage {
+        preview_path: r.preview_path.to_string_lossy().into(),
+        width: r.width,
+        height: r.height,
+        recipe_hash: r.recipe_hash,
+    })
 }
 
 #[derive(Debug, Serialize, Type, Clone)]
