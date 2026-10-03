@@ -18,8 +18,10 @@ mod security;
 mod settings;
 
 use serde::Serialize;
+use specta::Type;
+use tauri_specta::{collect_commands, Builder};
 
-#[derive(Serialize, Clone)]
+#[derive(Serialize, Type, Clone)]
 pub struct AppInfo {
     pub name: &'static str,
     pub version: &'static str,
@@ -27,8 +29,8 @@ pub struct AppInfo {
     pub ocr_engine: &'static str,
 }
 
-/// Smoke-test command. Confirms the IPC bridge is live during Phase 2.
 #[tauri::command]
+#[specta::specta]
 fn get_app_info() -> AppInfo {
     AppInfo {
         name: "DocSnap",
@@ -47,10 +49,27 @@ pub fn run() {
         .try_init()
         .ok();
 
+    let builder = Builder::<tauri::Wry>::new().commands(collect_commands![
+        get_app_info,
+        commands::import_image,
+    ]);
+
+    #[cfg(debug_assertions)]
+    builder
+        .export(
+            specta_typescript::Typescript::default(),
+            "../src/types/bindings.ts",
+        )
+        .ok();
+
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
-        .invoke_handler(tauri::generate_handler![get_app_info])
+        .invoke_handler(builder.invoke_handler())
+        .setup(move |app| {
+            builder.mount_events(app);
+            Ok(())
+        })
         .run(tauri::generate_context!())
         .expect("DocSnap failed to start");
 }
