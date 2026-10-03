@@ -7,6 +7,7 @@ import Documents from "./pages/Documents";
 import Settings from "./pages/Settings";
 import Export from "./pages/Export";
 import Batch from "./pages/Batch";
+import { useShortcuts } from "./hooks/useShortcuts";
 
 const navItems = [
   { to: "/home", label: "Home" },
@@ -20,6 +21,7 @@ const navItems = [
 ];
 
 export default function App() {
+  useShortcuts();
   return (
     <div className="flex h-full">
       <aside className="w-56 bg-neutral-900 border-r border-neutral-800 flex flex-col">

@@ -64,6 +64,8 @@ pub fn run() {
         commands::save_project,
         commands::load_project,
         commands::list_projects,
+        commands::cache_summary,
+        commands::clear_cache,
     ]);
 
     #[cfg(debug_assertions)]

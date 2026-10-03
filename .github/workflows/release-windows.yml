@@ -1,0 +1,41 @@
+name: Release (Windows)
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 9 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: pnpm }
+      - uses: dtolnay/rust-toolchain@stable
+        with: { targets: x86_64-pc-windows-msvc }
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile || pnpm install
+
+      - name: Stage bundled binaries
+        shell: pwsh
+        run: |
+          # Operators drop tesseract.exe + tessdata + pdfium.dll into
+          # apps/desktop/src-tauri/resources/{binaries,tessdata}.
+          # The job fails here if those are missing in the release pipeline.
+          if (-not (Test-Path "apps/desktop/src-tauri/resources/binaries/tesseract.exe")) {
+            Write-Error "Missing bundled tesseract.exe; see docs/PHASE_20_INSTALLER.md"
+            exit 1
+          }
+
+      - name: Tauri build
+        run: pnpm --filter docsnap-desktop tauri build
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: DocSnap-windows-msi
+          path: apps/desktop/src-tauri/target/release/bundle/**/*

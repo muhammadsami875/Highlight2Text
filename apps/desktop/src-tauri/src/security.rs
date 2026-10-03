@@ -47,3 +47,21 @@ pub fn sniff_mime(path: &Path) -> Result<String, SecurityError> {
         .ok_or(SecurityError::UnsupportedType)?;
     Ok(kind.mime_type().to_string())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn rejects_missing_path() {
+        let r = validate_input_path(Path::new("/nope/does/not/exist.png"));
+        assert!(matches!(r, Err(SecurityError::NotFound(_))));
+    }
+
+    #[test]
+    fn rejects_directories() {
+        let tmp = tempfile::tempdir().unwrap();
+        let r = validate_input_path(tmp.path());
+        assert!(matches!(r, Err(SecurityError::NotAFile)));
+    }
+}

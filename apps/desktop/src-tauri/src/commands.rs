@@ -212,6 +212,59 @@ fn sanitize_file_name(n: &str) -> String {
 
 #[tauri::command]
 #[specta::specta]
+pub fn cache_summary() -> Result<CacheSummary, CommandError> {
+    let root = crate::filesystem::cache_root();
+    let (bytes, files) = dir_size(&root);
+    Ok(CacheSummary { path: root.to_string_lossy().into(), bytes, files })
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn clear_cache() -> Result<(), CommandError> {
+    let root = crate::filesystem::cache_root();
+    for sub in ["previews", "thumbs", "ocr", "captures"] {
+        let d = root.join(sub);
+        if d.exists() {
+            // Remove children, not the dir itself, so later writes don't need
+            // to recreate it.
+            if let Ok(entries) = std::fs::read_dir(&d) {
+                for e in entries.flatten() {
+                    let _ = std::fs::remove_file(e.path());
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
+#[derive(Debug, Serialize, Type, Clone)]
+pub struct CacheSummary {
+    pub path: String,
+    pub bytes: u64,
+    pub files: u64,
+}
+
+fn dir_size(d: &std::path::Path) -> (u64, u64) {
+    let mut bytes = 0u64;
+    let mut files = 0u64;
+    if let Ok(entries) = std::fs::read_dir(d) {
+        for e in entries.flatten() {
+            let p = e.path();
+            if p.is_dir() {
+                let (b, f) = dir_size(&p);
+                bytes += b;
+                files += f;
+            } else if let Ok(md) = std::fs::metadata(&p) {
+                bytes += md.len();
+                files += 1;
+            }
+        }
+    }
+    (bytes, files)
+}
+
+#[tauri::command]
+#[specta::specta]
 pub fn save_capture(data_url: String) -> Result<ImportedPage, CommandError> {
     // Accepts "data:image/png;base64,..." or raw base64.
     let b64 = data_url.split(',').last().unwrap_or("").to_string();

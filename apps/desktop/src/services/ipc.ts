@@ -93,6 +93,12 @@ export async function listProjects(): Promise<ProjectEntry[]> {
   return invoke<ProjectEntry[]>("list_projects");
 }
 
+export interface CacheSummary { path: string; bytes: number; files: number }
+export async function cacheSummary(): Promise<CacheSummary> {
+  return invoke<CacheSummary>("cache_summary");
+}
+export async function clearCache(): Promise<void> { return invoke("clear_cache"); }
+
 export async function savePathWith(ext: string, defaultName: string): Promise<string | null> {
   const picked = await save({
     defaultPath: `${defaultName}.${ext}`,
