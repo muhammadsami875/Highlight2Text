@@ -33,3 +33,4 @@ infer = { workspace = true }
 sha2 = { workspace = true }
 hex = { workspace = true }
 dirs = { workspace = true }
+imageproc = { workspace = true }

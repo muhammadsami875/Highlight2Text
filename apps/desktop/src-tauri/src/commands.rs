@@ -6,6 +6,7 @@ use std::path::PathBuf;
 use serde::Serialize;
 use specta::Type;
 
+use crate::document_detection::{self, DetectionError};
 use crate::image_processing::{self, ImageError};
 use crate::security::{self, SecurityError};
 
@@ -40,6 +41,38 @@ impl From<SecurityError> for CommandError {
 }
 impl From<ImageError> for CommandError {
     fn from(e: ImageError) -> Self { CommandError::Image(e.to_string()) }
+}
+impl From<DetectionError> for CommandError {
+    fn from(e: DetectionError) -> Self { CommandError::Image(e.to_string()) }
+}
+
+#[derive(Debug, Serialize, Type, Clone, Copy)]
+pub struct Corner { pub x: f32, pub y: f32 }
+
+#[derive(Debug, Serialize, Type, Clone)]
+pub struct DetectedBoundary {
+    /// TL, TR, BR, BL in SOURCE image pixels.
+    pub corners: [Corner; 4],
+    pub confidence: f32,
+    pub fallback: bool,
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn detect_document_boundary(path: String) -> Result<DetectedBoundary, CommandError> {
+    let p = PathBuf::from(&path);
+    let validated = security::validate_input_path(&p)?;
+    let out = document_detection::detect_from_path(&validated.path)?;
+    Ok(DetectedBoundary {
+        corners: [
+            Corner { x: out.corners[0].x, y: out.corners[0].y },
+            Corner { x: out.corners[1].x, y: out.corners[1].y },
+            Corner { x: out.corners[2].x, y: out.corners[2].y },
+            Corner { x: out.corners[3].x, y: out.corners[3].y },
+        ],
+        confidence: out.confidence,
+        fallback: out.fallback,
+    })
 }
 
 #[tauri::command]

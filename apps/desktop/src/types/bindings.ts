@@ -25,3 +25,11 @@ export type CommandError =
   | { kind: "Validation"; message: string }
   | { kind: "Image"; message: string }
   | { kind: "Io"; message: string };
+
+export interface Corner { x: number; y: number }
+
+export interface DetectedBoundary {
+  corners: [Corner, Corner, Corner, Corner];
+  confidence: number;
+  fallback: boolean;
+}

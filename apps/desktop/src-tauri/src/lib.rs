@@ -52,6 +52,7 @@ pub fn run() {
     let builder = Builder::<tauri::Wry>::new().commands(collect_commands![
         get_app_info,
         commands::import_image,
+        commands::detect_document_boundary,
     ]);
 
     #[cfg(debug_assertions)]

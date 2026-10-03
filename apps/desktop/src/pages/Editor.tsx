@@ -1,7 +1,13 @@
 import { useCallback, useMemo, useState } from "react";
 import PageThumbnailStrip from "../components/PageThumbnailStrip";
+import CropOverlay from "../components/CropOverlay";
 import { useProject } from "../stores/projectStore";
-import { assetUrl, importImage, pickImages } from "../services/ipc";
+import {
+  assetUrl,
+  detectDocumentBoundary,
+  importImage,
+  pickImages,
+} from "../services/ipc";
 import { useDropTarget } from "../hooks/useDropTarget";
 
 function formatBytes(n: number) {
@@ -11,8 +17,10 @@ function formatBytes(n: number) {
 }
 
 export default function Editor() {
-  const { pages, activeId, addPages, removePage, setActive } = useProject();
+  const { pages, activeId, boundaries, addPages, removePage, setActive, setBoundary } =
+    useProject();
   const [busy, setBusy] = useState(false);
+  const [detecting, setDetecting] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
 
   const importMany = useCallback(
@@ -23,13 +31,10 @@ export default function Editor() {
       const ok = [];
       const errs: string[] = [];
       for (const p of paths) {
-        try {
-          ok.push(await importImage(p));
-        } catch (e: unknown) {
-          const msg =
-            typeof e === "object" && e && "message" in e
-              ? String((e as { message: unknown }).message)
-              : String(e);
+        try { ok.push(await importImage(p)); }
+        catch (e: unknown) {
+          const msg = typeof e === "object" && e && "message" in e
+            ? String((e as { message: unknown }).message) : String(e);
           errs.push(`${p}: ${msg}`);
         }
       }
@@ -46,6 +51,20 @@ export default function Editor() {
     () => pages.find((p) => p.id === activeId) ?? null,
     [pages, activeId],
   );
+  const activeBoundary = active ? boundaries[active.id] ?? null : null;
+
+  async function detectActive() {
+    if (!active) return;
+    setDetecting(true);
+    try {
+      const b = await detectDocumentBoundary(active.source_path);
+      setBoundary(active.id, b);
+    } catch (e) {
+      setErrors([String((e as { message?: unknown })?.message ?? e)]);
+    } finally {
+      setDetecting(false);
+    }
+  }
 
   return (
     <section className="grid grid-cols-[220px_1fr_280px] h-full">
@@ -61,7 +80,7 @@ export default function Editor() {
             onRemove={removePage}
           />
         </div>
-        <div className="p-2 border-t border-neutral-800 space-y-2">
+        <div className="p-2 border-t border-neutral-800">
           <button
             disabled={busy}
             onClick={async () => importMany(await pickImages())}
@@ -78,11 +97,22 @@ export default function Editor() {
         }`}
       >
         {active ? (
-          <img
-            src={assetUrl(active.preview_path)}
-            alt="page preview"
-            className="max-w-full max-h-full object-contain"
-          />
+          <div className="relative inline-block max-w-full max-h-full">
+            <img
+              src={assetUrl(active.preview_path)}
+              alt="page preview"
+              className="max-w-full max-h-full object-contain block"
+            />
+            {activeBoundary && (
+              <CropOverlay
+                srcWidth={active.width}
+                srcHeight={active.height}
+                corners={activeBoundary.corners}
+                confidence={activeBoundary.confidence}
+                fallback={activeBoundary.fallback}
+              />
+            )}
+          </div>
         ) : (
           <div className="text-neutral-500 text-sm text-center max-w-sm px-6">
             Drop PNG, JPEG, TIFF, BMP, or WebP files anywhere in this window, or
@@ -95,38 +125,50 @@ export default function Editor() {
       </div>
 
       <aside className="border-l border-neutral-800 bg-neutral-900 p-4 text-sm overflow-y-auto">
-        <div className="text-xs uppercase tracking-wide text-neutral-500 mb-3">
-          Details
-        </div>
+        <div className="text-xs uppercase tracking-wide text-neutral-500 mb-3">Details</div>
         {active ? (
-          <dl className="space-y-2 text-neutral-300">
-            <Row k="File">
-              <span className="break-all">{active.source_path}</span>
-            </Row>
-            <Row k="Type">{active.mime}</Row>
-            <Row k="Dimensions">
-              {active.width} × {active.height}
-            </Row>
-            <Row k="Size">{formatBytes(active.byte_size)}</Row>
-            <Row k="Hash">
-              <span className="font-mono text-xs">
-                {active.source_hash.slice(0, 16)}…
-              </span>
-            </Row>
-          </dl>
+          <>
+            <dl className="space-y-2 text-neutral-300">
+              <Row k="File"><span className="break-all">{active.source_path}</span></Row>
+              <Row k="Type">{active.mime}</Row>
+              <Row k="Dimensions">{active.width} × {active.height}</Row>
+              <Row k="Size">{formatBytes(active.byte_size)}</Row>
+              <Row k="Hash">
+                <span className="font-mono text-xs">{active.source_hash.slice(0, 16)}…</span>
+              </Row>
+            </dl>
+
+            <div className="mt-5">
+              <div className="text-xs uppercase tracking-wide text-neutral-500 mb-2">
+                Document detection
+              </div>
+              <button
+                disabled={detecting}
+                onClick={detectActive}
+                className="w-full rounded-md border border-neutral-700 hover:border-brand-500/60 disabled:opacity-50 text-neutral-200 text-sm py-2"
+              >
+                {detecting ? "Detecting…" : activeBoundary ? "Re-detect" : "Auto-detect boundary"}
+              </button>
+              {activeBoundary && (
+                <div className="mt-2 text-xs text-neutral-400">
+                  Confidence {Math.round(activeBoundary.confidence * 100)}%
+                  {activeBoundary.fallback && " · fallback bounding box"}
+                </div>
+              )}
+              <p className="mt-2 text-xs text-neutral-500">
+                Manual corner adjustment lands in Phase 5.
+              </p>
+            </div>
+          </>
         ) : (
           <p className="text-neutral-500">Select a page to see its metadata.</p>
         )}
 
         {errors.length > 0 && (
           <div className="mt-6 rounded-md border border-red-800 bg-red-900/20 p-3 text-xs">
-            <div className="text-red-300 font-medium mb-1">
-              {errors.length} file(s) failed
-            </div>
+            <div className="text-red-300 font-medium mb-1">{errors.length} issue(s)</div>
             <ul className="list-disc pl-4 text-red-200 space-y-1">
-              {errors.slice(0, 5).map((e, i) => (
-                <li key={i} className="break-all">{e}</li>
-              ))}
+              {errors.slice(0, 5).map((e, i) => <li key={i} className="break-all">{e}</li>)}
               {errors.length > 5 && <li>…and {errors.length - 5} more</li>}
             </ul>
           </div>
