@@ -61,6 +61,9 @@ pub fn run() {
         commands::export_text,
         commands::export_image,
         commands::save_capture,
+        commands::save_project,
+        commands::load_project,
+        commands::list_projects,
     ]);
 
     #[cfg(debug_assertions)]

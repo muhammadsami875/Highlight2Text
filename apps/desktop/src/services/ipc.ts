@@ -80,6 +80,19 @@ export async function exportImage(
   return invoke("export_image", { sourcePath, outPath, kind, quality });
 }
 
+import type { Project, ProjectEntry, ProjectPage } from "../types/bindings";
+export type { Project, ProjectEntry, ProjectPage } from "../types/bindings";
+
+export async function saveProject(name: string, pages: ProjectPage[]): Promise<string> {
+  return invoke<string>("save_project", { name, pages });
+}
+export async function loadProject(path: string): Promise<Project> {
+  return invoke<Project>("load_project", { path });
+}
+export async function listProjects(): Promise<ProjectEntry[]> {
+  return invoke<ProjectEntry[]>("list_projects");
+}
+
 export async function savePathWith(ext: string, defaultName: string): Promise<string | null> {
   const picked = await save({
     defaultPath: `${defaultName}.${ext}`,

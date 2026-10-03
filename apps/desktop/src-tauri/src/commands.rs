@@ -12,6 +12,7 @@ use crate::export::{self, ExportError, ImageFormatKind};
 use crate::image_processing::{self, EnhancementParams, ImageError};
 use crate::ocr::{self, OcrError, OcrOptions, OcrResult};
 use crate::pdf::{self, ExportPage, ExportWord, PdfError, PdfExportOptions};
+use crate::projects::{self, Page as ProjectPage, Project, ProjectError, SCHEMA_VERSION};
 use crate::perspective::{self, PerspectiveError};
 use crate::security::{self, SecurityError};
 
@@ -51,6 +52,9 @@ impl From<PdfError> for CommandError {
 }
 impl From<ExportError> for CommandError {
     fn from(e: ExportError) -> Self { CommandError::Io(e.to_string()) }
+}
+impl From<ProjectError> for CommandError {
+    fn from(e: ProjectError) -> Self { CommandError::Io(e.to_string()) }
 }
 
 impl From<SecurityError> for CommandError {
@@ -143,6 +147,67 @@ pub fn export_pdf(
         .collect();
     pdf::export_pdf(&converted, &PathBuf::from(out_path), &options)?;
     Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn save_project(name: String, pages: Vec<ProjectPage>) -> Result<String, CommandError> {
+    let now = chrono_now();
+    let proj = Project {
+        schema: SCHEMA_VERSION,
+        name: name.clone(),
+        created_at: now.clone(),
+        updated_at: now,
+        pages,
+    };
+    let safe = sanitize_file_name(&name);
+    let path = projects::library_dir().join(format!("{safe}.docsnap"));
+    projects::save(&path, &proj)?;
+    Ok(path.to_string_lossy().into())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn load_project(path: String) -> Result<Project, CommandError> {
+    Ok(projects::load(&PathBuf::from(path))?)
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn list_projects() -> Result<Vec<ProjectEntry>, CommandError> {
+    Ok(projects::list_projects()
+        .into_iter()
+        .map(|p| ProjectEntry {
+            path: p.to_string_lossy().into(),
+            name: p.file_stem().and_then(|s| s.to_str()).unwrap_or("").to_string(),
+            modified_ms: std::fs::metadata(&p).ok()
+                .and_then(|m| m.modified().ok())
+                .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+                .map(|d| d.as_millis() as u64)
+                .unwrap_or(0),
+        })
+        .collect())
+}
+
+#[derive(Debug, Serialize, Type, Clone)]
+pub struct ProjectEntry {
+    pub path: String,
+    pub name: String,
+    pub modified_ms: u64,
+}
+
+fn chrono_now() -> String {
+    use std::time::{SystemTime, UNIX_EPOCH};
+    let secs = SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0);
+    format!("@{secs}")
+}
+
+fn sanitize_file_name(n: &str) -> String {
+    let s: String = n.chars()
+        .map(|c| if c.is_alphanumeric() || "-_ .".contains(c) { c } else { '_' })
+        .collect();
+    let s = s.trim().replace("  ", " ");
+    if s.is_empty() { "untitled".into() } else { s }
 }
 
 #[tauri::command]

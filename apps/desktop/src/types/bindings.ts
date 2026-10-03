@@ -105,3 +105,30 @@ export interface PdfExportPage {
 }
 
 export type ImageFormatKind = "Png" | "Jpeg" | "Webp" | "Tiff";
+
+export interface ProjectEntry {
+  path: string;
+  name: string;
+  modified_ms: number;
+}
+
+export interface Project {
+  schema: number;
+  name: string;
+  created_at: string;
+  updated_at: string;
+  pages: ProjectPage[];
+}
+
+export interface ProjectPage {
+  id: string;
+  source_path: string;
+  source_hash: string;
+  width: number;
+  height: number;
+  rotation: number;
+  corners: [[number, number], [number, number], [number, number], [number, number]] | null;
+  warp_target: [number, number] | null;
+  enhancement: unknown | null;
+  ocr: unknown | null;
+}
