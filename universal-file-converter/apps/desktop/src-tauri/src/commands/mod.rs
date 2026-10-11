@@ -308,6 +308,16 @@ pub fn get_settings() -> crate::settings::AppSettings {
 
 #[tauri::command]
 pub fn save_settings(settings: crate::settings::AppSettings) -> Result<(), String> {
+    // Validate settings bounds to prevent resource exhaustion
+    if settings.advanced.max_file_size_mb > 10240 {
+        return Err("max_file_size_mb cannot exceed 10240 (10 GB)".to_string());
+    }
+    if settings.advanced.process_timeout_sec > 3600 {
+        return Err("process_timeout_sec cannot exceed 3600 (1 hour)".to_string());
+    }
+    if settings.conversion.max_parallel_jobs == 0 || settings.conversion.max_parallel_jobs > 16 {
+        return Err("max_parallel_jobs must be between 1 and 16".to_string());
+    }
     crate::settings::save_settings_to_disk(&settings)
 }
 
