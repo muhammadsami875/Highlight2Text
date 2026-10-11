@@ -235,21 +235,50 @@ fn pdf_metadata_has_page_count() {
 #[test]
 fn extension_all_known_formats() {
     let known = vec![
-        ("pdf", "pdf"), ("doc", "doc"), ("docx", "docx"),
-        ("xls", "xls"), ("xlsx", "xlsx"), ("ppt", "ppt"),
-        ("pptx", "pptx"), ("odt", "odt"), ("ods", "ods"),
-        ("odp", "odp"), ("rtf", "rtf"), ("txt", "txt"),
-        ("csv", "csv"), ("tsv", "tsv"), ("md", "md"),
-        ("html", "html"), ("htm", "html"), ("xml", "xml"),
-        ("json", "json"), ("png", "png"), ("jpg", "jpg"),
-        ("jpeg", "jpg"), ("webp", "webp"), ("gif", "gif"),
-        ("bmp", "bmp"), ("tiff", "tiff"), ("tif", "tiff"),
-        ("svg", "svg"), ("py", "py"), ("js", "js"),
-        ("ts", "ts"), ("java", "java"), ("cpp", "cpp"),
-        ("c", "c"), ("cs", "cs"), ("php", "php"),
-        ("rb", "rb"), ("go", "go"), ("rs", "rs"),
-        ("css", "css"), ("sql", "sql"), ("sh", "sh"),
-        ("yaml", "yaml"), ("yml", "yaml"),
+        ("pdf", "pdf"),
+        ("doc", "doc"),
+        ("docx", "docx"),
+        ("xls", "xls"),
+        ("xlsx", "xlsx"),
+        ("ppt", "ppt"),
+        ("pptx", "pptx"),
+        ("odt", "odt"),
+        ("ods", "ods"),
+        ("odp", "odp"),
+        ("rtf", "rtf"),
+        ("txt", "txt"),
+        ("csv", "csv"),
+        ("tsv", "tsv"),
+        ("md", "md"),
+        ("html", "html"),
+        ("htm", "html"),
+        ("xml", "xml"),
+        ("json", "json"),
+        ("png", "png"),
+        ("jpg", "jpg"),
+        ("jpeg", "jpg"),
+        ("webp", "webp"),
+        ("gif", "gif"),
+        ("bmp", "bmp"),
+        ("tiff", "tiff"),
+        ("tif", "tiff"),
+        ("svg", "svg"),
+        ("py", "py"),
+        ("js", "js"),
+        ("ts", "ts"),
+        ("java", "java"),
+        ("cpp", "cpp"),
+        ("c", "c"),
+        ("cs", "cs"),
+        ("php", "php"),
+        ("rb", "rb"),
+        ("go", "go"),
+        ("rs", "rs"),
+        ("css", "css"),
+        ("sql", "sql"),
+        ("sh", "sh"),
+        ("yaml", "yaml"),
+        ("yml", "yaml"),
     ];
 
     for (ext, expected) in known {
@@ -259,8 +288,11 @@ fn extension_all_known_formats() {
             "Extension '{}' should map to format '{}'",
             ext, expected
         );
-        assert_ne!(result.mime, "application/octet-stream",
-            "Extension '{}' should have a specific MIME type", ext);
+        assert_ne!(
+            result.mime, "application/octet-stream",
+            "Extension '{}' should have a specific MIME type",
+            ext
+        );
     }
 }
 

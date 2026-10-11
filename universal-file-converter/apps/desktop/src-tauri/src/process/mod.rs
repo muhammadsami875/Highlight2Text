@@ -139,10 +139,7 @@ impl ProcessRunner {
                         return Ok(ProcessOutput {
                             exit_code: -1,
                             stdout: String::new(),
-                            stderr: format!(
-                                "Process timed out after {}s",
-                                self.timeout.as_secs()
-                            ),
+                            stderr: format!("Process timed out after {}s", self.timeout.as_secs()),
                             timed_out: true,
                         });
                     }
@@ -193,9 +190,7 @@ mod tests {
 
     #[test]
     fn run_false_returns_nonzero() {
-        let output = ProcessRunner::new(PathBuf::from("false"))
-            .run()
-            .unwrap();
+        let output = ProcessRunner::new(PathBuf::from("false")).run().unwrap();
 
         assert!(!output.success());
         assert_ne!(output.exit_code, 0);
@@ -226,8 +221,7 @@ mod tests {
 
     #[test]
     fn run_nonexistent_binary() {
-        let result = ProcessRunner::new(PathBuf::from("nonexistent_binary_xyz"))
-            .run();
+        let result = ProcessRunner::new(PathBuf::from("nonexistent_binary_xyz")).run();
 
         assert!(result.is_err());
     }

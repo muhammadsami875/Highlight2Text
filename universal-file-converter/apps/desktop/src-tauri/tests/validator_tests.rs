@@ -12,7 +12,10 @@ fn fixture(name: &str) -> std::path::PathBuf {
 fn validate_pdf_valid() {
     match validate_output(&fixture("sample_text.pdf"), "pdf") {
         ValidationResult::Valid => {}
-        other => panic!("Expected Valid, got {:?}", matches!(other, ValidationResult::Invalid(_))),
+        other => panic!(
+            "Expected Valid, got {:?}",
+            matches!(other, ValidationResult::Invalid(_))
+        ),
     }
 }
 
@@ -20,7 +23,10 @@ fn validate_pdf_valid() {
 fn validate_png_valid() {
     match validate_output(&fixture("sample.png"), "png") {
         ValidationResult::Valid => {}
-        other => panic!("Expected Valid, got {:?}", matches!(other, ValidationResult::Invalid(_))),
+        other => panic!(
+            "Expected Valid, got {:?}",
+            matches!(other, ValidationResult::Invalid(_))
+        ),
     }
 }
 
@@ -71,7 +77,10 @@ fn validate_csv_valid() {
 fn validate_xlsx_valid() {
     match validate_output(&fixture("sample.xlsx"), "xlsx") {
         ValidationResult::Valid => {}
-        other => panic!("Expected Valid for XLSX, got {:?}", matches!(other, ValidationResult::Invalid(_))),
+        other => panic!(
+            "Expected Valid for XLSX, got {:?}",
+            matches!(other, ValidationResult::Invalid(_))
+        ),
     }
 }
 

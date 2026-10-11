@@ -193,12 +193,7 @@ impl Converter for HtmlToPdfConverter {
             let start_y = page_height - margin;
             for (i, line) in chunk.iter().enumerate() {
                 let y = start_y - (i as f32 * line_height);
-                content.push_str(&format!(
-                    "{} {} Td ({}) Tj\n",
-                    margin,
-                    y,
-                    pdf_escape(line)
-                ));
+                content.push_str(&format!("{} {} Td ({}) Tj\n", margin, y, pdf_escape(line)));
             }
             content.push_str("ET\n");
 
@@ -242,8 +237,9 @@ impl Converter for HtmlToPdfConverter {
         doc.trailer.set("Root", Object::Reference(catalog_id));
 
         let mut buf = Vec::new();
-        doc.save_to(&mut buf)
-            .map_err(|e| ConversionError::engine_failure("html_to_pdf", &format!("PDF error: {}", e)))?;
+        doc.save_to(&mut buf).map_err(|e| {
+            ConversionError::engine_failure("html_to_pdf", &format!("PDF error: {}", e))
+        })?;
 
         let stem = request
             .input_path

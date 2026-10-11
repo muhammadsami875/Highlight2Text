@@ -14,8 +14,8 @@ pub struct CodeHighlightConverter {
 impl CodeHighlightConverter {
     pub fn new() -> Self {
         let code_formats: Vec<String> = vec![
-            "py", "js", "ts", "java", "cpp", "c", "cs", "php",
-            "rb", "go", "rs", "css", "sql", "sh", "yaml",
+            "py", "js", "ts", "java", "cpp", "c", "cs", "php", "rb", "go", "rs", "css", "sql",
+            "sh", "yaml",
         ]
         .into_iter()
         .map(String::from)
@@ -87,9 +87,10 @@ impl Converter for CodeHighlightConverter {
             .syntax_theme
             .as_deref()
             .unwrap_or("InspiredGitHub");
-        let theme = ts.themes.get(theme_name).unwrap_or_else(|| {
-            ts.themes.values().next().unwrap()
-        });
+        let theme = ts
+            .themes
+            .get(theme_name)
+            .unwrap_or_else(|| ts.themes.values().next().unwrap());
 
         let syntax_name = Self::format_to_syntax_name(&request.detected_format);
         let syntax = ss
@@ -97,13 +98,19 @@ impl Converter for CodeHighlightConverter {
             .or_else(|| ss.find_syntax_by_extension(&request.detected_format))
             .unwrap_or_else(|| ss.find_syntax_plain_text());
 
-        let highlighted = highlighted_html_for_string(&source, &ss, syntax, theme)
-            .map_err(|e| ConversionError::engine_failure("code_highlight", &format!("Highlight error: {}", e)))?;
+        let highlighted =
+            highlighted_html_for_string(&source, &ss, syntax, theme).map_err(|e| {
+                ConversionError::engine_failure(
+                    "code_highlight",
+                    &format!("Highlight error: {}", e),
+                )
+            })?;
 
         let show_line_numbers = request.options.line_numbers.unwrap_or(true);
         let body = if show_line_numbers {
             let lines: Vec<&str> = highlighted.lines().collect();
-            let mut numbered = String::from("<table style=\"border-collapse:collapse;width:100%\"><tbody>");
+            let mut numbered =
+                String::from("<table style=\"border-collapse:collapse;width:100%\"><tbody>");
             let mut line_num = 1;
             for line in &lines {
                 if line.contains("<pre") || line.contains("</pre>") {
@@ -121,7 +128,11 @@ impl Converter for CodeHighlightConverter {
             highlighted
         };
 
-        let title = request.input_path.file_name().and_then(|s| s.to_str()).unwrap_or("Code");
+        let title = request
+            .input_path
+            .file_name()
+            .and_then(|s| s.to_str())
+            .unwrap_or("Code");
         let full_html = format!(
             "<!DOCTYPE html>\n<html>\n<head>\n<meta charset=\"UTF-8\">\n\
              <title>{}</title>\n\
@@ -130,7 +141,11 @@ impl Converter for CodeHighlightConverter {
             title, body
         );
 
-        let stem = request.input_path.file_stem().and_then(|s| s.to_str()).unwrap_or("output");
+        let stem = request
+            .input_path
+            .file_stem()
+            .and_then(|s| s.to_str())
+            .unwrap_or("output");
         let output_path = job_dir.join("output").join(format!("{}.html", stem));
         std::fs::create_dir_all(output_path.parent().unwrap())
             .map_err(|e| ConversionError::io_error(&format!("Cannot create output dir: {}", e)))?;

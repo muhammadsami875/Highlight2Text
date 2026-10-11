@@ -28,8 +28,9 @@ impl XlsxExtractConverter {
     }
 
     fn extract_to_csv(path: &std::path::Path) -> Result<String, ConversionError> {
-        let mut workbook = open_workbook_auto(path)
-            .map_err(|e| ConversionError::corrupt_input(&format!("Cannot open spreadsheet: {}", e)))?;
+        let mut workbook = open_workbook_auto(path).map_err(|e| {
+            ConversionError::corrupt_input(&format!("Cannot open spreadsheet: {}", e))
+        })?;
 
         let sheet_names = workbook.sheet_names().to_vec();
         if sheet_names.is_empty() {
@@ -44,19 +45,23 @@ impl XlsxExtractConverter {
 
         for row in range.rows() {
             let fields: Vec<String> = row.iter().map(cell_to_string).collect();
-            wtr.write_record(&fields)
-                .map_err(|e| ConversionError::engine_failure("xlsx_extract", &format!("CSV write error: {}", e)))?;
+            wtr.write_record(&fields).map_err(|e| {
+                ConversionError::engine_failure("xlsx_extract", &format!("CSV write error: {}", e))
+            })?;
         }
 
-        let bytes = wtr.into_inner()
-            .map_err(|e| ConversionError::engine_failure("xlsx_extract", &format!("CSV flush error: {}", e)))?;
-        String::from_utf8(bytes)
-            .map_err(|e| ConversionError::engine_failure("xlsx_extract", &format!("UTF-8 error: {}", e)))
+        let bytes = wtr.into_inner().map_err(|e| {
+            ConversionError::engine_failure("xlsx_extract", &format!("CSV flush error: {}", e))
+        })?;
+        String::from_utf8(bytes).map_err(|e| {
+            ConversionError::engine_failure("xlsx_extract", &format!("UTF-8 error: {}", e))
+        })
     }
 
     fn extract_to_json(path: &std::path::Path) -> Result<String, ConversionError> {
-        let mut workbook = open_workbook_auto(path)
-            .map_err(|e| ConversionError::corrupt_input(&format!("Cannot open spreadsheet: {}", e)))?;
+        let mut workbook = open_workbook_auto(path).map_err(|e| {
+            ConversionError::corrupt_input(&format!("Cannot open spreadsheet: {}", e))
+        })?;
 
         let sheet_names = workbook.sheet_names().to_vec();
         if sheet_names.is_empty() {
@@ -77,7 +82,10 @@ impl XlsxExtractConverter {
         for row in rows_iter {
             let mut obj = serde_json::Map::new();
             for (i, cell) in row.iter().enumerate() {
-                let key = headers.get(i).cloned().unwrap_or_else(|| format!("col_{}", i));
+                let key = headers
+                    .get(i)
+                    .cloned()
+                    .unwrap_or_else(|| format!("col_{}", i));
                 let value = match cell {
                     Data::Empty => serde_json::Value::Null,
                     Data::Float(f) => serde_json::json!(*f),
@@ -90,8 +98,9 @@ impl XlsxExtractConverter {
             records.push(serde_json::Value::Object(obj));
         }
 
-        serde_json::to_string_pretty(&records)
-            .map_err(|e| ConversionError::engine_failure("xlsx_extract", &format!("JSON error: {}", e)))
+        serde_json::to_string_pretty(&records).map_err(|e| {
+            ConversionError::engine_failure("xlsx_extract", &format!("JSON error: {}", e))
+        })
     }
 }
 

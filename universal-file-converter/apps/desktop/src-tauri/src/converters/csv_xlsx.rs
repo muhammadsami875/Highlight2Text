@@ -55,13 +55,17 @@ impl Converter for CsvXlsxConverter {
 
         let headers = reader
             .headers()
-            .map_err(|e| ConversionError::corrupt_input(&format!("Cannot read CSV headers: {}", e)))?
+            .map_err(|e| {
+                ConversionError::corrupt_input(&format!("Cannot read CSV headers: {}", e))
+            })?
             .clone();
 
         for (col, header) in headers.iter().enumerate() {
             worksheet
                 .write_string_with_format(0, col as u16, header, &bold)
-                .map_err(|e| ConversionError::engine_failure("csv_xlsx", &format!("Write error: {}", e)))?;
+                .map_err(|e| {
+                    ConversionError::engine_failure("csv_xlsx", &format!("Write error: {}", e))
+                })?;
         }
 
         for (row_idx, result) in reader.records().enumerate() {
@@ -71,23 +75,37 @@ impl Converter for CsvXlsxConverter {
                 if let Ok(num) = field.parse::<f64>() {
                     worksheet
                         .write_number((row_idx + 1) as u32, col as u16, num)
-                        .map_err(|e| ConversionError::engine_failure("csv_xlsx", &format!("Write error: {}", e)))?;
+                        .map_err(|e| {
+                            ConversionError::engine_failure(
+                                "csv_xlsx",
+                                &format!("Write error: {}", e),
+                            )
+                        })?;
                 } else {
                     worksheet
                         .write_string((row_idx + 1) as u32, col as u16, field)
-                        .map_err(|e| ConversionError::engine_failure("csv_xlsx", &format!("Write error: {}", e)))?;
+                        .map_err(|e| {
+                            ConversionError::engine_failure(
+                                "csv_xlsx",
+                                &format!("Write error: {}", e),
+                            )
+                        })?;
                 }
             }
         }
 
-        let stem = request.input_path.file_stem().and_then(|s| s.to_str()).unwrap_or("output");
+        let stem = request
+            .input_path
+            .file_stem()
+            .and_then(|s| s.to_str())
+            .unwrap_or("output");
         let output_path = job_dir.join("output").join(format!("{}.xlsx", stem));
         std::fs::create_dir_all(output_path.parent().unwrap())
             .map_err(|e| ConversionError::io_error(&format!("Cannot create output dir: {}", e)))?;
 
-        workbook
-            .save(&output_path)
-            .map_err(|e| ConversionError::engine_failure("csv_xlsx", &format!("XLSX save error: {}", e)))?;
+        workbook.save(&output_path).map_err(|e| {
+            ConversionError::engine_failure("csv_xlsx", &format!("XLSX save error: {}", e))
+        })?;
 
         Ok(output_path)
     }

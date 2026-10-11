@@ -60,11 +60,7 @@ impl ConverterRegistry {
 
     pub fn best_converter(&self, from: &str, to: &str) -> Option<&dyn Converter> {
         let mut candidates = self.find_direct(from, to);
-        candidates.sort_by(|a, b| {
-            b.manifest()
-                .priority
-                .cmp(&a.manifest().priority)
-        });
+        candidates.sort_by(|a, b| b.manifest().priority.cmp(&a.manifest().priority));
         candidates.into_iter().next()
     }
 

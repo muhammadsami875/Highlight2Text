@@ -7,11 +7,20 @@ pub fn detect_by_extension(ext: &str) -> ExtensionResult {
     let (format, mime) = match ext {
         "pdf" => ("pdf", "application/pdf"),
         "doc" => ("doc", "application/msword"),
-        "docx" => ("docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"),
+        "docx" => (
+            "docx",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        ),
         "xls" => ("xls", "application/vnd.ms-excel"),
-        "xlsx" => ("xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
+        "xlsx" => (
+            "xlsx",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        ),
         "ppt" => ("ppt", "application/vnd.ms-powerpoint"),
-        "pptx" => ("pptx", "application/vnd.openxmlformats-officedocument.presentationml.presentation"),
+        "pptx" => (
+            "pptx",
+            "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        ),
         "odt" => ("odt", "application/vnd.oasis.opendocument.text"),
         "ods" => ("ods", "application/vnd.oasis.opendocument.spreadsheet"),
         "odp" => ("odp", "application/vnd.oasis.opendocument.presentation"),

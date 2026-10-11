@@ -43,11 +43,9 @@ pub struct BatchProgress {
 
 #[tauri::command]
 pub fn detect_file(path: String) -> Result<DetectedFileInfo, String> {
-    let p = std::path::Path::new(&path);
-    if !p.exists() {
-        return Err("File does not exist".to_string());
-    }
-    detectors::detect_format(p)
+    // Validate the path: reject null bytes, resolve symlinks, ensure it's a regular file
+    let canonical = crate::security::validate_input_path(&path).map_err(|e| e.to_string())?;
+    detectors::detect_format(&canonical)
 }
 
 #[tauri::command]
@@ -84,8 +82,12 @@ pub async fn start_conversion(
     state: State<'_, AppState>,
     app: tauri::AppHandle,
 ) -> Result<String, String> {
-    let input = std::path::Path::new(&input_path);
-    let detected = detectors::detect_format(input)?;
+    // Validate input path: reject null bytes, resolve symlinks, ensure regular file
+    let input = crate::security::validate_input_path(&input_path).map_err(|e| e.to_string())?;
+    let detected = detectors::detect_format(&input)?;
+
+    // Validate output directory exists
+    crate::security::reject_null_bytes(&output_dir).map_err(|e| e.to_string())?;
 
     let job_id = Uuid::new_v4().to_string();
     let output_path = crate::filesystem::generate_output_filename(
@@ -130,10 +132,7 @@ pub async fn get_job_status(
 }
 
 #[tauri::command]
-pub async fn cancel_job(
-    job_id: String,
-    state: State<'_, AppState>,
-) -> Result<(), String> {
+pub async fn cancel_job(job_id: String, state: State<'_, AppState>) -> Result<(), String> {
     let mut queue = state.job_queue.lock().await;
     if queue.cancel(&job_id) {
         Ok(())
@@ -188,6 +187,9 @@ pub async fn start_batch(
     state: State<'_, AppState>,
     app: tauri::AppHandle,
 ) -> Result<Vec<String>, String> {
+    // Validate output directory
+    crate::security::reject_null_bytes(&output_dir).map_err(|e| e.to_string())?;
+
     let mut ids = Vec::new();
 
     {
@@ -200,8 +202,10 @@ pub async fn start_batch(
                 .as_str()
                 .ok_or("Missing outputFormat")?;
 
-            let input = std::path::Path::new(input_path);
-            let detected = detectors::detect_format(input)?;
+            // Validate each input path
+            let input =
+                crate::security::validate_input_path(input_path).map_err(|e| e.to_string())?;
+            let detected = detectors::detect_format(&input)?;
 
             let job_id = Uuid::new_v4().to_string();
             let output_path = crate::filesystem::generate_output_filename(
@@ -314,8 +318,20 @@ pub fn get_engine_status(state: State<'_, AppState>) -> Vec<EngineInfo> {
 
 #[tauri::command]
 pub fn open_file_location(path: String) -> Result<(), String> {
+    // Validate the path before passing to the OS open handler to prevent
+    // opening arbitrary or crafted locations via path traversal.
+    crate::security::reject_null_bytes(&path).map_err(|e| e.to_string())?;
+
     let p = std::path::Path::new(&path);
-    if let Some(parent) = p.parent() {
+    // Resolve the real path to prevent symlink-based traversal
+    let canonical = p
+        .canonicalize()
+        .map_err(|e| format!("Cannot resolve path: {}", e))?;
+
+    if let Some(parent) = canonical.parent() {
+        if !parent.is_dir() {
+            return Err("Parent path is not a directory".to_string());
+        }
         open::that(parent).map_err(|e| format!("Cannot open folder: {}", e))?;
     }
     Ok(())

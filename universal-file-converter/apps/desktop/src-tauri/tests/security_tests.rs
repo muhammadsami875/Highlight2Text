@@ -1,5 +1,5 @@
-use universal_file_converter::security;
 use universal_file_converter::filesystem;
+use universal_file_converter::security;
 
 #[test]
 fn sanitize_filename_removes_path_separators() {
@@ -103,12 +103,8 @@ fn generate_output_sanitizes_malicious_name() {
     let tmp = std::env::temp_dir().join("ufc_malname_test");
     std::fs::create_dir_all(&tmp).unwrap();
 
-    let path = filesystem::generate_output_filename(
-        "../../etc/evil.txt",
-        "pdf",
-        "-converted",
-        &tmp,
-    );
+    let path =
+        filesystem::generate_output_filename("../../etc/evil.txt", "pdf", "-converted", &tmp);
     let filename = path.file_name().unwrap().to_str().unwrap();
     assert!(!filename.contains('/'));
     assert!(!filename.contains(".."));

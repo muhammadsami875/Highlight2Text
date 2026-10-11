@@ -147,10 +147,12 @@ fn extract_tj_text(line: &str) -> Option<String> {
                 }
                 if i < bytes.len() {
                     let segment = String::from_utf8_lossy(&bytes[start..i]);
-                    text.push_str(&segment
-                        .replace("\\(", "(")
-                        .replace("\\)", ")")
-                        .replace("\\\\", "\\"));
+                    text.push_str(
+                        &segment
+                            .replace("\\(", "(")
+                            .replace("\\)", ")")
+                            .replace("\\\\", "\\"),
+                    );
                 }
             }
             i += 1;

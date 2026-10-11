@@ -2,8 +2,8 @@ pub mod extension;
 pub mod magic;
 pub mod reconcile;
 
-use calamine::Reader;
 use crate::conversion::job::{DetectedFileInfo, FileMetadata};
+use calamine::Reader;
 use std::path::Path;
 
 pub fn detect_format(path: &Path) -> Result<DetectedFileInfo, String> {

@@ -18,8 +18,11 @@ impl ImageToPdfConverter {
                 engine_type: EngineType::Bundled,
                 license: "MIT".to_string(),
                 input_formats: vec![
-                    "png".into(), "jpg".into(), "webp".into(),
-                    "bmp".into(), "tiff".into(),
+                    "png".into(),
+                    "jpg".into(),
+                    "webp".into(),
+                    "bmp".into(),
+                    "tiff".into(),
                 ],
                 output_formats: vec!["pdf".into()],
                 platforms: vec![Platform::Windows, Platform::MacOS, Platform::Linux],
@@ -71,9 +74,7 @@ impl Converter for ImageToPdfConverter {
         let page_id = doc.new_object_id();
         let content_id = doc.new_object_id();
 
-        let content = lopdf::content::Content {
-            operations: vec![],
-        };
+        let content = lopdf::content::Content { operations: vec![] };
         let content_data = content.encode().unwrap_or_default();
 
         let mut stream_dict = lopdf::Dictionary::new();
@@ -96,23 +97,31 @@ impl Converter for ImageToPdfConverter {
         page_dict.set("Parent", lopdf::Object::Reference(pages_id));
         page_dict.set("MediaBox", media_box);
         page_dict.set("Contents", lopdf::Object::Reference(content_id));
-        doc.objects.insert(page_id, lopdf::Object::Dictionary(page_dict));
+        doc.objects
+            .insert(page_id, lopdf::Object::Dictionary(page_dict));
 
         let mut pages_dict = lopdf::Dictionary::new();
         pages_dict.set("Type", lopdf::Object::Name(b"Pages".to_vec()));
-        pages_dict.set("Kids", lopdf::Object::Array(vec![lopdf::Object::Reference(page_id)]));
+        pages_dict.set(
+            "Kids",
+            lopdf::Object::Array(vec![lopdf::Object::Reference(page_id)]),
+        );
         pages_dict.set("Count", lopdf::Object::Integer(1));
-        doc.objects.insert(pages_id, lopdf::Object::Dictionary(pages_dict));
+        doc.objects
+            .insert(pages_id, lopdf::Object::Dictionary(pages_dict));
 
         let catalog_id = doc.new_object_id();
         let mut catalog = lopdf::Dictionary::new();
         catalog.set("Type", lopdf::Object::Name(b"Catalog".to_vec()));
         catalog.set("Pages", lopdf::Object::Reference(pages_id));
-        doc.objects.insert(catalog_id, lopdf::Object::Dictionary(catalog));
-        doc.trailer.set("Root", lopdf::Object::Reference(catalog_id));
+        doc.objects
+            .insert(catalog_id, lopdf::Object::Dictionary(catalog));
+        doc.trailer
+            .set("Root", lopdf::Object::Reference(catalog_id));
 
-        doc.save(&output_path)
-            .map_err(|e| ConversionError::engine_failure("image_to_pdf", &format!("PDF save failed: {}", e)))?;
+        doc.save(&output_path).map_err(|e| {
+            ConversionError::engine_failure("image_to_pdf", &format!("PDF save failed: {}", e))
+        })?;
 
         Ok(output_path)
     }

@@ -68,10 +68,7 @@ impl TextToPdfConverter {
 
         let mut doc = Document::with_version("1.7");
 
-        let font_id = doc.add_object(Stream::new(
-            lopdf::Dictionary::new(),
-            Vec::new(),
-        ));
+        let font_id = doc.add_object(Stream::new(lopdf::Dictionary::new(), Vec::new()));
         let _ = font_id;
 
         let mut font_dict = lopdf::Dictionary::new();
@@ -107,10 +104,7 @@ impl TextToPdfConverter {
                         margin, y, line_num, escaped
                     ));
                 } else {
-                    content.push_str(&format!(
-                        "{} {} Td ({}) Tj\n",
-                        margin, y, escaped
-                    ));
+                    content.push_str(&format!("{} {} Td ({}) Tj\n", margin, y, escaped));
                 }
             }
             content.push_str("ET\n");
@@ -156,8 +150,9 @@ impl TextToPdfConverter {
         doc.trailer.set("Root", Object::Reference(catalog_id));
 
         let mut buf = Vec::new();
-        doc.save_to(&mut buf)
-            .map_err(|e| ConversionError::engine_failure("text_to_pdf", &format!("PDF write error: {}", e)))?;
+        doc.save_to(&mut buf).map_err(|e| {
+            ConversionError::engine_failure("text_to_pdf", &format!("PDF write error: {}", e))
+        })?;
 
         Ok(buf)
     }

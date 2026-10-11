@@ -19,12 +19,68 @@ impl std::fmt::Display for SecurityError {
     }
 }
 
+/// Reject paths containing null bytes, which can truncate C-level path operations.
+pub fn reject_null_bytes(input: &str) -> Result<(), SecurityError> {
+    if input.contains('\0') {
+        return Err(SecurityError::UnsafePath(
+            "Path contains null byte".to_string(),
+        ));
+    }
+    Ok(())
+}
+
+/// Validate that a user-supplied path is a regular file (not a symlink to
+/// something unexpected) and exists on disk.  Returns the canonical path.
+pub fn validate_input_path(input: &str) -> Result<PathBuf, SecurityError> {
+    reject_null_bytes(input)?;
+
+    let path = PathBuf::from(input);
+    let canonical = path
+        .canonicalize()
+        .map_err(|_| SecurityError::UnsafePath(format!("Cannot resolve path: {}", input)))?;
+
+    let meta = std::fs::metadata(&canonical)
+        .map_err(|_| SecurityError::UnsafePath(format!("Cannot read metadata: {}", input)))?;
+    if !meta.is_file() {
+        return Err(SecurityError::UnsafePath(format!(
+            "Not a regular file: {}",
+            input
+        )));
+    }
+
+    Ok(canonical)
+}
+
+/// Validate that a user-supplied directory path resolves to an actual
+/// directory.  Returns the canonical path.
+pub fn validate_directory_path(input: &str) -> Result<PathBuf, SecurityError> {
+    reject_null_bytes(input)?;
+
+    let path = PathBuf::from(input);
+    let canonical = path
+        .canonicalize()
+        .map_err(|_| SecurityError::UnsafePath(format!("Cannot resolve path: {}", input)))?;
+
+    let meta = std::fs::metadata(&canonical)
+        .map_err(|_| SecurityError::UnsafePath(format!("Cannot read metadata: {}", input)))?;
+    if !meta.is_dir() {
+        return Err(SecurityError::UnsafePath(format!(
+            "Not a directory: {}",
+            input
+        )));
+    }
+
+    Ok(canonical)
+}
+
 pub fn sanitize_path(input: &str, allowed_base: &Path) -> Result<PathBuf, SecurityError> {
+    reject_null_bytes(input)?;
+
     let path = PathBuf::from(input);
 
-    let canonical = path.canonicalize().map_err(|_| {
-        SecurityError::UnsafePath(format!("Cannot resolve path: {}", input))
-    })?;
+    let canonical = path
+        .canonicalize()
+        .map_err(|_| SecurityError::UnsafePath(format!("Cannot resolve path: {}", input)))?;
 
     if !canonical.starts_with(allowed_base) {
         return Err(SecurityError::PathTraversal(format!(

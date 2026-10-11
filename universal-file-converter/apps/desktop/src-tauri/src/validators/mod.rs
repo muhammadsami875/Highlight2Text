@@ -36,9 +36,7 @@ fn validate_pdf(path: &Path) -> ValidationResult {
         Ok(doc) => {
             let page_count = doc.get_pages().len();
             if page_count == 0 {
-                ValidationResult::ValidWithWarnings(vec![
-                    "PDF has 0 pages".to_string(),
-                ])
+                ValidationResult::ValidWithWarnings(vec!["PDF has 0 pages".to_string()])
             } else {
                 ValidationResult::Valid
             }
@@ -117,7 +115,7 @@ fn validate_text(path: &Path) -> ValidationResult {
                 ValidationResult::Valid
             } else {
                 ValidationResult::ValidWithWarnings(vec![
-                    "File contains non-UTF-8 bytes".to_string(),
+                    "File contains non-UTF-8 bytes".to_string()
                 ])
             }
         }

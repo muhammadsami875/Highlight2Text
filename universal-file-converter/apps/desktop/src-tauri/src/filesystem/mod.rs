@@ -30,7 +30,11 @@ pub fn generate_output_filename(
         .unwrap_or("output");
 
     let stem = crate::security::sanitize_filename(raw_stem);
-    let stem = if stem.is_empty() { "output".to_string() } else { stem };
+    let stem = if stem.is_empty() {
+        "output".to_string()
+    } else {
+        stem
+    };
 
     let base_name = format!("{}{}.{}", stem, suffix, output_format);
     let mut output_path = output_dir.join(&base_name);
@@ -63,8 +67,8 @@ pub fn cleanup_abandoned_jobs(base_temp: &Path, max_age_hours: u64) {
         return;
     };
 
-    let cutoff = std::time::SystemTime::now()
-        - std::time::Duration::from_secs(max_age_hours * 3600);
+    let cutoff =
+        std::time::SystemTime::now() - std::time::Duration::from_secs(max_age_hours * 3600);
 
     for entry in entries.flatten() {
         if let Ok(metadata) = entry.metadata() {

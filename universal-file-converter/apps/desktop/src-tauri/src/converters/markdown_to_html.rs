@@ -62,7 +62,11 @@ impl Converter for MarkdownToHtmlConverter {
             html_output
         );
 
-        let stem = request.input_path.file_stem().and_then(|s| s.to_str()).unwrap_or("output");
+        let stem = request
+            .input_path
+            .file_stem()
+            .and_then(|s| s.to_str())
+            .unwrap_or("output");
         let output_path = job_dir.join("output").join(format!("{}.html", stem));
         std::fs::create_dir_all(output_path.parent().unwrap())
             .map_err(|e| ConversionError::io_error(&format!("Cannot create output dir: {}", e)))?;

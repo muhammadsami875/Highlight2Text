@@ -73,9 +73,7 @@ pub fn detect_by_magic(path: &Path) -> Result<MagicResult, String> {
         });
     }
 
-    if data.starts_with(&[0x49, 0x49, 0x2A, 0x00])
-        || data.starts_with(&[0x4D, 0x4D, 0x00, 0x2A])
-    {
+    if data.starts_with(&[0x49, 0x49, 0x2A, 0x00]) || data.starts_with(&[0x4D, 0x4D, 0x00, 0x2A]) {
         return Ok(MagicResult {
             format: "tiff".to_string(),
             mime: "image/tiff".to_string(),

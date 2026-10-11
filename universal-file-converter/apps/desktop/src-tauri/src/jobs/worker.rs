@@ -32,14 +32,23 @@ pub async fn process_queue(
     }
 }
 
-fn emit_progress(app: &Option<tauri::AppHandle>, job_id: &str, progress: f32, message: &str, status: &str) {
+fn emit_progress(
+    app: &Option<tauri::AppHandle>,
+    job_id: &str,
+    progress: f32,
+    message: &str,
+    status: &str,
+) {
     if let Some(handle) = app {
-        let _ = handle.emit("conversion-progress", ProgressEvent {
-            job_id: job_id.to_string(),
-            progress,
-            message: message.to_string(),
-            status: status.to_string(),
-        });
+        let _ = handle.emit(
+            "conversion-progress",
+            ProgressEvent {
+                job_id: job_id.to_string(),
+                progress,
+                message: message.to_string(),
+                status: status.to_string(),
+            },
+        );
     }
 }
 
@@ -128,9 +137,9 @@ async fn process_single_job(
     }
     emit_progress(app, job_id, 10.0, "Converting...", "converting");
 
-    let job_dir = std::env::temp_dir()
-        .join("ufc_jobs")
-        .join(job_id);
+    // Use the app's own temp directory instead of the system temp dir
+    // to avoid predictable path issues and keep files organized
+    let job_dir = crate::filesystem::get_temp_base().join("jobs").join(job_id);
     let _ = std::fs::create_dir_all(job_dir.join("output"));
 
     let total_steps = plan.steps.len();
@@ -173,7 +182,19 @@ async fn process_single_job(
                 );
             }
         }
-        emit_progress(app, job_id, step_progress, &format!("Step {}/{}: {} -> {}", step_idx + 1, total_steps, step.from, step.to), "converting");
+        emit_progress(
+            app,
+            job_id,
+            step_progress,
+            &format!(
+                "Step {}/{}: {} -> {}",
+                step_idx + 1,
+                total_steps,
+                step.from,
+                step.to
+            ),
+            "converting",
+        );
 
         let step_from = step.from.clone();
         let step_to = step.to.clone();
@@ -181,12 +202,11 @@ async fn process_single_job(
         let jd = job_dir.clone();
         let req = request.clone();
 
-        let result = tokio::task::spawn_blocking(move || {
-            match reg.best_converter(&step_from, &step_to) {
+        let result =
+            tokio::task::spawn_blocking(move || match reg.best_converter(&step_from, &step_to) {
                 Some(converter) => converter.convert(&req, &jd),
                 None => Err(ConversionError::unsupported(&step_from, &step_to)),
-            }
-        });
+            });
 
         match result.await {
             Ok(Ok(output_path)) => {

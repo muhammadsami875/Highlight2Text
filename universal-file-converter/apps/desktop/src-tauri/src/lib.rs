@@ -14,9 +14,9 @@ pub mod validators;
 
 use commands::{
     cancel_all_jobs, cancel_job, clear_history, detect_file, get_batch_progress,
-    get_conversion_history, get_conversion_plan, get_engine_status, get_job_status,
-    get_settings, get_supported_outputs, open_file_location, retry_job, save_settings,
-    start_batch, start_conversion,
+    get_conversion_history, get_conversion_plan, get_engine_status, get_job_status, get_settings,
+    get_supported_outputs, open_file_location, retry_job, save_settings, start_batch,
+    start_conversion,
 };
 use engines::registry::ConverterRegistry;
 use jobs::queue::JobQueue;

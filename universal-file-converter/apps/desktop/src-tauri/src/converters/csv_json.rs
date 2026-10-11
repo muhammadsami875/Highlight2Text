@@ -32,7 +32,9 @@ impl CsvJsonConverter {
 
         let headers: Vec<String> = reader
             .headers()
-            .map_err(|e| ConversionError::corrupt_input(&format!("Cannot read CSV headers: {}", e)))?
+            .map_err(|e| {
+                ConversionError::corrupt_input(&format!("Cannot read CSV headers: {}", e))
+            })?
             .iter()
             .map(|h| h.to_string())
             .collect();
@@ -43,14 +45,18 @@ impl CsvJsonConverter {
                 .map_err(|e| ConversionError::corrupt_input(&format!("CSV parse error: {}", e)))?;
             let mut obj = serde_json::Map::new();
             for (i, field) in record.iter().enumerate() {
-                let key = headers.get(i).cloned().unwrap_or_else(|| format!("col_{}", i));
+                let key = headers
+                    .get(i)
+                    .cloned()
+                    .unwrap_or_else(|| format!("col_{}", i));
                 obj.insert(key, serde_json::Value::String(field.to_string()));
             }
             records.push(serde_json::Value::Object(obj));
         }
 
-        serde_json::to_string_pretty(&records)
-            .map_err(|e| ConversionError::engine_failure("csv_json", &format!("JSON serialize error: {}", e)))
+        serde_json::to_string_pretty(&records).map_err(|e| {
+            ConversionError::engine_failure("csv_json", &format!("JSON serialize error: {}", e))
+        })
     }
 
     fn json_to_csv(input: &std::path::Path) -> Result<String, ConversionError> {
@@ -62,7 +68,11 @@ impl CsvJsonConverter {
 
         let array = match &value {
             serde_json::Value::Array(arr) => arr,
-            _ => return Err(ConversionError::corrupt_input("JSON must be an array of objects")),
+            _ => {
+                return Err(ConversionError::corrupt_input(
+                    "JSON must be an array of objects",
+                ))
+            }
         };
 
         if array.is_empty() {
@@ -71,12 +81,17 @@ impl CsvJsonConverter {
 
         let headers: Vec<String> = match &array[0] {
             serde_json::Value::Object(obj) => obj.keys().cloned().collect(),
-            _ => return Err(ConversionError::corrupt_input("JSON array must contain objects")),
+            _ => {
+                return Err(ConversionError::corrupt_input(
+                    "JSON array must contain objects",
+                ))
+            }
         };
 
         let mut wtr = csv::Writer::from_writer(Vec::new());
-        wtr.write_record(&headers)
-            .map_err(|e| ConversionError::engine_failure("csv_json", &format!("CSV write error: {}", e)))?;
+        wtr.write_record(&headers).map_err(|e| {
+            ConversionError::engine_failure("csv_json", &format!("CSV write error: {}", e))
+        })?;
 
         for item in array {
             if let serde_json::Value::Object(obj) = item {
@@ -88,15 +103,18 @@ impl CsvJsonConverter {
                         None => String::new(),
                     })
                     .collect();
-                wtr.write_record(&row)
-                    .map_err(|e| ConversionError::engine_failure("csv_json", &format!("CSV write error: {}", e)))?;
+                wtr.write_record(&row).map_err(|e| {
+                    ConversionError::engine_failure("csv_json", &format!("CSV write error: {}", e))
+                })?;
             }
         }
 
-        let bytes = wtr.into_inner()
-            .map_err(|e| ConversionError::engine_failure("csv_json", &format!("CSV flush error: {}", e)))?;
-        String::from_utf8(bytes)
-            .map_err(|e| ConversionError::engine_failure("csv_json", &format!("UTF-8 error: {}", e)))
+        let bytes = wtr.into_inner().map_err(|e| {
+            ConversionError::engine_failure("csv_json", &format!("CSV flush error: {}", e))
+        })?;
+        String::from_utf8(bytes).map_err(|e| {
+            ConversionError::engine_failure("csv_json", &format!("UTF-8 error: {}", e))
+        })
     }
 }
 
@@ -118,11 +136,23 @@ impl Converter for CsvJsonConverter {
         request: &ConversionRequest,
         job_dir: &PathBuf,
     ) -> Result<PathBuf, ConversionError> {
-        let stem = request.input_path.file_stem().and_then(|s| s.to_str()).unwrap_or("output");
-        let (content, ext) = match (request.detected_format.as_str(), request.output_format.as_str()) {
+        let stem = request
+            .input_path
+            .file_stem()
+            .and_then(|s| s.to_str())
+            .unwrap_or("output");
+        let (content, ext) = match (
+            request.detected_format.as_str(),
+            request.output_format.as_str(),
+        ) {
             ("csv", "json") => (Self::csv_to_json(&request.input_path)?, "json"),
             ("json", "csv") => (Self::json_to_csv(&request.input_path)?, "csv"),
-            _ => return Err(ConversionError::unsupported(&request.detected_format, &request.output_format)),
+            _ => {
+                return Err(ConversionError::unsupported(
+                    &request.detected_format,
+                    &request.output_format,
+                ))
+            }
         };
 
         let output_path = job_dir.join("output").join(format!("{}.{}", stem, ext));
