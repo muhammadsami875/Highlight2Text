@@ -2,14 +2,15 @@
 
 Trigger-based, not prompted: whenever the Organizer Agent (or a heuristic check here)
 flags an uploaded file as an invoice, this agent extracts the vendor/amount/date/category
-and logs a row to the expenses table with zero human intervention, then logs what it did
-to the Activity Feed. Rows live in the database (not a CSV on disk) so the log survives
-across serverless invocations; /api/expenses.csv renders it to CSV on demand.
+via pattern matching (no external API call) and logs a row to the expenses table with
+zero human intervention, then logs what it did to the Activity Feed. Rows live in the
+database (not a CSV on disk) so the log survives across serverless invocations;
+/api/expenses.csv renders it to CSV on demand.
 """
 import datetime
 import re
 
-from .. import config, db, llm
+from .. import db
 
 INVOICE_HINTS = ("invoice", "total due", "amount due", "bill to", "remit payment")
 CATEGORY_KEYWORDS = {
@@ -31,10 +32,7 @@ def maybe_trigger(file_id: str, filename: str, text: str, doc_type: str) -> dict
     if not looks_like_invoice(doc_type, text):
         return None
 
-    if config.LIVE_MODE:
-        row = _live_extract(filename, text)
-    else:
-        row = _mock_extract(filename, text)
+    row = _extract(filename, text)
 
     db.insert_expense(
         date=row["date"], vendor=row["vendor"], amount=row["amount"],
@@ -49,30 +47,7 @@ def maybe_trigger(file_id: str, filename: str, text: str, doc_type: str) -> dict
     return row
 
 
-def _live_extract(filename: str, text: str) -> dict:
-    system = (
-        "You are the Workflow Agent for an autonomous cloud drive. Extract invoice fields "
-        "from the document. Respond with ONLY a JSON object, no prose."
-    )
-    user = (
-        f"Filename: {filename}\nDocument:\n{text[:4000]}\n\n"
-        'Return JSON: {"vendor": str, "amount": number (no currency symbol), '
-        '"date": "YYYY-MM-DD", "category": one of '
-        '["Infrastructure", "Software", "Travel", "Office", "General"]}'
-    )
-    try:
-        data = llm.complete_json(system, user, max_tokens=300)
-        return {
-            "vendor": str(data.get("vendor", "Unknown vendor")),
-            "amount": float(data.get("amount", 0) or 0),
-            "date": str(data.get("date", datetime.date.today().isoformat())),
-            "category": str(data.get("category", "General")),
-        }
-    except Exception:
-        return _mock_extract(filename, text)
-
-
-def _mock_extract(filename: str, text: str) -> dict:
+def _extract(filename: str, text: str) -> dict:
     amounts = [
         float(a.replace(",", "")) for a in re.findall(r"\$\s?([\d,]+\.?\d*)", text)
     ]

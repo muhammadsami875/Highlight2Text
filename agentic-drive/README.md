@@ -16,14 +16,15 @@ user-flows this was designed from before any code was written.
 ## What it does
 
 Every file that enters the drive goes through one ingestion pipeline, and four small
-agents sit on top of it:
+agents sit on top of it. Every agent is **rule-based** — keyword/pattern matching and
+TF-IDF ranking, no external LLM API call and nothing to configure:
 
 | Agent | Brief's capability | What it does |
 |---|---|---|
-| **Organizer** | Proactive Organization | Tags every file, assigns it to an existing cluster or starts a new one, and writes a one-line explanation of *why* — no manual folders, ever. |
-| **Retrieval** | Semantic Retrieval | Answers free-text questions ("What was the budget discussed in the Q3 marketing meetings?") by reading across every file and citing sources inline. |
-| **Synthesis** | Cross-Document Synthesis | Reads several selected files and drafts a new document from an instruction (e.g. "draft a unified PRD from these"), then **saves the result back into the drive** as a first-class, tagged, provenance-stamped file. |
-| **Workflow** | Automated Workflows | Triggers automatically (no prompt) when an uploaded file looks like an invoice: extracts vendor/amount/date/category and logs a row to the expense log. |
+| **Organizer** | Proactive Organization | Tags every file, assigns it to an existing cluster or starts a new one by keyword overlap, and writes a one-line explanation of *why* — no manual folders, ever. |
+| **Retrieval** | Semantic Retrieval | Answers free-text questions ("What was the budget discussed in the Q3 marketing meetings?") by TF-IDF-ranking the most relevant passages across every file and citing sources inline. |
+| **Synthesis** | Cross-Document Synthesis | Reads several selected files and assembles a new document from an instruction (e.g. "draft a unified PRD from these") by merging their summaries and leading content, then **saves the result back into the drive** as a first-class, tagged, provenance-stamped file. |
+| **Workflow** | Automated Workflows | Triggers automatically (no prompt) when an uploaded file looks like an invoice: extracts vendor/amount/date/category via pattern matching and logs a row to the expense log. |
 
 A thin **Orchestrator** routes the chat box's free text to Retrieval or Synthesis
 depending on whether you've selected files and whether the message reads like a
@@ -47,9 +48,8 @@ an **Activity Feed** so autonomous behavior stays legible instead of opaque.
 │  Storage:             Postgres (DATABASE_URL) when set, else local SQLite — files, tags,   │
 │                       clusters, activity log, and the expense log all live in the DB, not  │
 │                       on disk, so the app has no persistent-filesystem dependency          │
-│  Retrieval:           pure-Python TF-IDF over paragraph chunks → LLM reads top chunks       │
-│  LLM:                 Claude (Anthropic API) when ANTHROPIC_API_KEY is set, else a          │
-│                       deterministic heuristic fallback per agent ("mock mode")             │
+│  Agents:              rule-based throughout — TF-IDF ranking for retrieval, keyword        │
+│                       overlap for clustering, regex for invoice field extraction           │
 └────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -60,13 +60,12 @@ This runs equally well two ways, with no code changes between them:
   a serverless function's filesystem is read-only outside of `/tmp` and nothing written
   there survives past the current invocation.
 
-**Why pure-Python TF-IDF + LLM instead of a hosted vector DB:** a real embedding model
-dependency (or a paid embeddings API, or sklearn/numpy/scipy) is both a likely demo-day
-failure point and unnecessary weight in a serverless function's bundle. TF-IDF retrieval
-(no dependencies at all — see `backend/app/search.py`) + an LLM that reads the retrieved
-passages and synthesizes a cited answer gets the same user-facing behavior ("ask
-anything, get one cited answer") and degrades gracefully (see "Mock mode" below) even
-without a key.
+**Why pure-Python TF-IDF instead of a hosted vector DB or an LLM:** no external API
+calls means no API key, no billing, no network dependency, and no risk of a demo
+failing on an unfamiliar machine or because of a third-party outage — every agent runs
+entirely on the drive's own content. TF-IDF retrieval (no dependencies at all — see
+`backend/app/search.py`) gets the same user-facing shape ("ask anything, get a cited
+answer") without any of that.
 
 ## Running it locally
 
@@ -74,7 +73,6 @@ Requires Python 3.10+.
 
 ```bash
 cd agentic-drive
-export ANTHROPIC_API_KEY=sk-ant-...   # optional — see "Mock mode" below
 ./run.sh
 ```
 
@@ -96,16 +94,13 @@ installs the root `requirements.txt`, and serves `index.html` / `app.js` / `styl
 directly from the project root as static assets. `vercel.json` rewrites `/api/*`
 requests to the function; everything else is static.
 
-Before (or after) your first deploy, set these in the Vercel dashboard under
-**Settings → Environment Variables** (or `vercel env add`):
+The only environment variable worth setting is persistence:
 
 | Variable | Required? | What it does |
 |---|---|---|
-| `ANTHROPIC_API_KEY` | Recommended | Enables live agent reasoning. Without it the deployment runs in mock mode (see below) — it works, but you lose the actual synthesis/tagging intelligence that's the point of the demo. |
 | `DATABASE_URL` (or `POSTGRES_URL`) | **Strongly recommended** | A Postgres connection string. **Without this, the app falls back to a SQLite file under `/tmp`, which is wiped on every cold start** — uploaded files and the activity/expense log will appear to vanish between requests. The easiest path: in the Vercel dashboard, go to **Storage → Create Database → Postgres** and connect it to this project; Vercel sets `POSTGRES_URL` for you automatically, no code changes needed. |
 
-After adding environment variables, redeploy (`vercel --prod`) so the function picks
-them up.
+After adding it, redeploy (`vercel --prod`) so the function picks it up.
 
 **If Vercel's import UI says "Multiple applications detected" and prompts you to set
 up "Services":** that's a false positive, not a sign you need the multi-app monorepo
@@ -114,33 +109,27 @@ make sure there's only one `requirements.txt` in the repo; this project keeps a 
 one at the root specifically to avoid tripping that detector). There is exactly one
 backend here.
 
+**If the root URL returns `{"detail":"Not Found"}` instead of the UI:** Vercel likely
+auto-detected the Framework Preset as "FastAPI" and is routing every path through the
+function instead of serving the static files. Project → **Settings → General →
+Framework Preset → Other**, save, then redeploy.
+
 ### Try this demo script (matches the brief's examples)
 
 1. **Load demo files** and watch the Activity Feed: the Organizer Agent files the three
    meeting transcripts into the same cluster and explains why, and the Workflow Agent
    fires on the invoice and logs it to the expense table on the right, unprompted.
 2. Ask: *"What was the budget discussed in the Q3 marketing meetings?"* → the Retrieval
-   Agent answers from all three transcripts with citations, and (in live mode) calls out
-   that the budget changed from $50,000 to $42,000 between meetings instead of picking
-   one number silently.
+   Agent returns the most relevant passages from all three transcripts with citations —
+   including the kickoff meeting's $50,000 figure and the later meeting's revised
+   $42,000, so you can see the discrepancy yourself in the sources.
 3. Check the two budget-meeting files in the left pane, then type: *"Draft a one-page
-   Q4 planning brief based on these"* → the Synthesis Agent reads both, drafts a new
+   Q4 planning brief based on these"* → the Synthesis Agent merges both, drafts a new
    markdown file, and it appears back in the file list, tagged and clustered, with a
    provenance footer naming its sources.
 4. Upload a new file whose text contains the word "invoice" and a dollar amount → the
    Workflow Agent logs it to the expense log with no prompt required; download it as
    CSV from the right-hand pane.
-
-### Mock mode
-
-Without `ANTHROPIC_API_KEY` set, the app still runs end-to-end: each agent falls back to
-a deterministic heuristic (keyword-based tagging/clustering, regex-based invoice field
-extraction, raw passage retrieval instead of synthesized answers) so the full pipeline —
-upload → organize → index → ask → synthesize → workflow — is demoable and testable with
-no setup. The mode badge in the top bar always says which mode is active, and every mock
-response says so inline. Set the key to see the actual agentic reasoning (topic-aware
-clustering, cited synthesized answers, contradiction detection across sources, drafted
-documents).
 
 ## API
 
@@ -154,7 +143,7 @@ All endpoints are under `/api`:
   Retrieval or Synthesis
 - `GET /api/activity` — the agent activity log
 - `GET /api/expenses`, `GET /api/expenses.csv` — the Workflow Agent's expense log
-- `GET /api/status` — whether live or mock mode is active
+- `GET /api/status` — which storage backend is active (`postgres` or `sqlite`)
 
 ## What's modeled but not yet surfaced in the UI
 
@@ -166,6 +155,13 @@ honest:
   "what depends on this file" view yet.
 - **Staleness detection** — nothing currently re-checks a synthesis's sources after the
   fact and flags it as possibly outdated.
+
+Also worth noting: the rule-based agents here are a deliberate scope choice for this
+prototype (see "Why pure-Python TF-IDF instead of a hosted vector DB or an LLM" above),
+not a limitation of the architecture — BRAINSTORM.md's vision assumes real language
+understanding, and each agent's module is small and self-contained enough that swapping
+in an LLM call (Claude or otherwise) for any one of them is a localized change, not a
+rewrite.
 
 ## Project structure
 
@@ -189,11 +185,10 @@ agentic-drive/
     ├── seed_data/          # sample meeting transcripts + invoice for the demo
     └── app/
         ├── main.py         # FastAPI routes
-        ├── config.py       # paths + live/mock mode + sqlite/postgres switch
+        ├── config.py       # paths + sqlite/postgres switch
         ├── db.py           # storage layer (Postgres via DATABASE_URL, else SQLite)
         ├── storage.py      # in-memory text extraction (txt/md/csv/pdf) — no disk writes
         ├── search.py       # pure-Python TF-IDF retrieval, no dependencies
-        ├── llm.py          # Claude API wrapper
         └── agents/
             ├── organizer.py
             ├── retrieval.py

@@ -15,8 +15,3 @@ DATABASE_URL = os.environ.get("DATABASE_URL", "").strip() or os.environ.get("POS
 SQLITE_PATH = Path("/tmp/drive.db") if ON_VERCEL else BASE_DIR / "data" / "drive.db"
 if not ON_VERCEL:
     SQLITE_PATH.parent.mkdir(parents=True, exist_ok=True)
-
-ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "").strip()
-ANTHROPIC_MODEL = os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-4-5")
-
-LIVE_MODE = bool(ANTHROPIC_API_KEY)

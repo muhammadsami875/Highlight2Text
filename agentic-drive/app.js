@@ -58,13 +58,8 @@ function fileTypeIcon(docType, size = 36) {
 async function refreshStatus() {
   const status = await api("/api/status");
   const badge = $("#mode-badge");
-  if (status.live_mode) {
-    badge.textContent = `live · ${status.model}`;
-    badge.className = "mode-pill live";
-  } else {
-    badge.textContent = "mock mode — add ANTHROPIC_API_KEY";
-    badge.className = "mode-pill mock";
-  }
+  badge.textContent = status.db === "postgres" ? "rule-based agents · postgres" : "rule-based agents · sqlite";
+  badge.className = "mode-pill live";
 }
 
 async function loadAll() {

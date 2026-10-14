@@ -142,7 +142,6 @@ button { font-family: inherit; }
   white-space: nowrap;
 }
 .mode-pill.live { background: #e6f4ea; color: var(--green); }
-.mode-pill.mock { background: #fef7e0; color: #b06000; }
 .avatar {
   width: 32px; height: 32px; border-radius: 50%;
   background: var(--blue); color: #fff;

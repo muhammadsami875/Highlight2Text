@@ -141,11 +141,7 @@ def expenses_csv():
 
 @app.get("/api/status")
 def status():
-    return {
-        "live_mode": config.LIVE_MODE,
-        "model": config.ANTHROPIC_MODEL if config.LIVE_MODE else None,
-        "db": "postgres" if config.DATABASE_URL else "sqlite",
-    }
+    return {"db": "postgres" if config.DATABASE_URL else "sqlite"}
 
 
 # Local dev only — on Vercel, static files at the project root are served directly by
