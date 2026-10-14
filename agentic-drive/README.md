@@ -107,6 +107,13 @@ Before (or after) your first deploy, set these in the Vercel dashboard under
 After adding environment variables, redeploy (`vercel --prod`) so the function picks
 them up.
 
+**If Vercel's import UI says "Multiple applications detected" and prompts you to set
+up "Services":** that's a false positive, not a sign you need the multi-app monorepo
+flow — ignore it and look for a way to import normally (or, importing from GitHub,
+make sure there's only one `requirements.txt` in the repo; this project keeps a single
+one at the root specifically to avoid tripping that detector). There is exactly one
+backend here.
+
 ### Try this demo script (matches the brief's examples)
 
 1. **Load demo files** and watch the Activity Feed: the Organizer Agent files the three
@@ -166,15 +173,19 @@ honest:
 agentic-drive/
 ├── BRAINSTORM.md          # conceptual vision + agentic user-flows (read this first)
 ├── README.md
-├── run.sh                  # local dev launcher
+├── run.sh                  # local dev launcher (installs requirements.txt + uvicorn)
 ├── vercel.json             # rewrites /api/* to the serverless function
-├── requirements.txt        # deps for the Vercel function (fastapi, anthropic, pypdf, psycopg)
+├── requirements.txt        # the ONLY requirements.txt in the repo — deps for both the
+│                             Vercel function and local dev. Deliberately not duplicated
+│                             under backend/: a second requirements.txt there makes
+│                             Vercel's import scanner think this is a multi-app monorepo
+│                             and push you into its "Services" flow, which this project
+│                             doesn't need (it's one backend, not several).
 ├── index.html, app.js, style.css   # static frontend — served by Vercel's CDN in prod,
 │                                      or by FastAPI itself when running via run.sh
 ├── api/
 │   └── index.py            # Vercel entrypoint — re-exports the FastAPI app below
 └── backend/
-    ├── requirements.txt    # same deps + uvicorn, for local dev
     ├── seed_data/          # sample meeting transcripts + invoice for the demo
     └── app/
         ├── main.py         # FastAPI routes
