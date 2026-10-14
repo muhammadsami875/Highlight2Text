@@ -4,65 +4,141 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Agentic Drive</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <header class="topbar">
-    <div class="brand">
-      <span class="brand-mark">◆</span>
-      <span>Agentic Drive</span>
+    <div class="topbar-left">
+      <div class="logo">
+        <svg class="logo-mark" width="40" height="36" viewBox="0 0 40 36" fill="none">
+          <path d="M14.4 2L2 24.5L8.8 34H25.6L32.4 24.5L20 2H14.4Z" fill="#2684FC"/>
+          <path d="M20 2L32.4 24.5L25.6 34H40L27.6 11.2L20 2Z" fill="#00AC47"/>
+          <path d="M8.8 34H25.6L20 24H2L8.8 34Z" fill="#FFBA00"/>
+        </svg>
+        <span class="logo-text">Agentic Drive</span>
+      </div>
     </div>
-    <div class="topbar-actions">
-      <span id="mode-badge" class="badge">checking mode…</span>
-      <label class="upload-btn">
-        Upload file
-        <input id="file-input" type="file" hidden />
-      </label>
-      <button id="seed-btn" class="btn-ghost">Load demo files</button>
+
+    <div class="topbar-search">
+      <div class="search-pill" id="search-pill">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27a6.5 6.5 0 1 0-.7.7l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9z"/></svg>
+        <input id="search-input" type="text" autocomplete="off"
+               placeholder="Search your drive, or press Enter to ask the agents a question" />
+        <button id="search-clear" class="icon-btn hidden" title="Clear">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </div>
+      <div class="search-dropdown hidden" id="search-dropdown"></div>
+    </div>
+
+    <div class="topbar-right">
+      <span id="mode-badge" class="mode-pill">checking mode…</span>
+      <button class="icon-btn" id="activity-toggle" title="Agent activity">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm1 11h-2V7h2zm0 4h-2v-2h2z"/></svg>
+      </button>
+      <div class="avatar">AD</div>
     </div>
   </header>
 
-  <main class="layout">
-    <section class="pane pane-files">
-      <h2>Workspaces</h2>
-      <p class="hint">No folders — every file is filed automatically by the Organizer Agent.
-        Check files to include them in a synthesis request.</p>
-      <div id="clusters"></div>
-    </section>
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="new-btn-wrap">
+        <button id="new-btn" class="new-btn">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6z"/></svg>
+          New
+        </button>
+        <div id="new-menu" class="new-menu hidden">
+          <button data-action="upload">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/></svg>
+            File upload
+          </button>
+          <button data-action="seed">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M12 2l1.8 5.6H19l-4.6 3.4 1.8 5.6L12 13.2 7.8 16.6l1.8-5.6L5 8h5.2z"/></svg>
+            Load demo files
+          </button>
+        </div>
+        <input id="file-input" type="file" hidden />
+      </div>
 
-    <section class="pane pane-chat">
-      <h2>Ask your drive</h2>
-      <p class="hint">Ask a question across every file, or select files on the left and say
-        "draft…" / "summarize…" to have the Synthesis Agent write a new file.</p>
-      <div id="chat-log" class="chat-log"></div>
-      <form id="chat-form" class="chat-form">
-        <input id="chat-input" type="text" autocomplete="off"
-               placeholder='e.g. "What was the budget discussed in the Q3 marketing meetings?"' />
-        <button type="submit">Ask</button>
-      </form>
-      <div id="selection-bar" class="selection-bar"></div>
-    </section>
+      <nav class="nav">
+        <button class="nav-item active" data-view="all" id="nav-all">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M4 4h7l2 2h7v2H4zM4 10h16v10H4z"/></svg>
+          My Drive
+        </button>
+        <button class="nav-item" data-view="expenses" id="nav-expenses">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M6 2h12v20l-3-2-3 2-3-2-3 2zM8 7h8v2H8zm0 4h8v2H8z"/></svg>
+          Expenses
+        </button>
+      </nav>
 
-    <section class="pane pane-activity">
-      <h2>Agent activity</h2>
-      <p class="hint">Everything the agents did on your behalf, unprompted.</p>
-      <div id="activity-feed" class="activity-feed"></div>
+      <div class="nav-section-label">Workspaces</div>
+      <nav class="nav" id="cluster-nav"></nav>
 
-      <h2>Expense log</h2>
-      <p class="hint">Written automatically by the Workflow Agent when an invoice is uploaded.</p>
-      <table id="expenses-table" class="expenses-table">
-        <thead><tr><th>Date</th><th>Vendor</th><th>Amount</th><th>Category</th></tr></thead>
-        <tbody></tbody>
-      </table>
-      <a id="expenses-download" class="btn-ghost" href="/api/expenses.csv">Download expenses.csv</a>
-    </section>
-  </main>
+      <div class="sidebar-footer">
+        <div class="storage-meter">
+          <div class="storage-bar"><div class="storage-fill" id="storage-fill"></div></div>
+          <div class="storage-label" id="storage-label">No files yet</div>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <div class="toolbar" id="toolbar">
+        <h1 id="view-title">My Drive</h1>
+        <div class="toolbar-actions">
+          <button class="icon-btn" id="view-list-btn" title="List view">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M4 5h16v2H4zm0 6h16v2H4zm0 6h16v2H4z"/></svg>
+          </button>
+          <button class="icon-btn active" id="view-grid-btn" title="Grid view">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M4 4h7v7H4zm9 0h7v7h-7zM4 13h7v7H4zm9 0h7v7h-7z"/></svg>
+          </button>
+          <span class="toolbar-sep"></span>
+          <button class="icon-btn" id="details-toggle" title="View details">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M11 7h2v2h-2zm0 4h2v6h-2zM12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="selection-bar hidden" id="selection-bar">
+        <button class="icon-btn" id="selection-clear" title="Clear selection">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+        <span id="selection-count">0 selected</span>
+        <div class="selection-actions">
+          <button class="pill-btn" id="ask-selected-btn">Ask about these</button>
+          <button class="pill-btn pill-btn-filled" id="draft-selected-btn">Draft from these</button>
+        </div>
+      </div>
+
+      <div class="file-area" id="file-area"></div>
+    </main>
+
+    <aside class="details-panel hidden" id="details-panel">
+      <div class="details-tabs">
+        <button class="tab active" data-tab="details">Details</button>
+        <button class="tab" data-tab="activity">Activity</button>
+      </div>
+      <div class="details-body" id="details-body"></div>
+    </aside>
+  </div>
 
   <div id="file-modal" class="modal hidden">
     <div class="modal-card">
-      <button id="modal-close" class="modal-close">&times;</button>
+      <button class="modal-close" data-close-modal="file-modal">&times;</button>
       <h3 id="modal-title"></h3>
       <pre id="modal-body"></pre>
+    </div>
+  </div>
+
+  <div id="prompt-modal" class="modal hidden">
+    <div class="modal-card modal-card-small">
+      <button class="modal-close" data-close-modal="prompt-modal">&times;</button>
+      <h3>Draft from <span id="prompt-count"></span> selected file(s)</h3>
+      <p class="hint">The Synthesis Agent will read these files and write a new file back into the drive.</p>
+      <input id="prompt-input" type="text" placeholder='e.g. "Draft a unified PRD from these"' />
+      <button id="prompt-submit" class="pill-btn pill-btn-filled">Draft it</button>
     </div>
   </div>
 

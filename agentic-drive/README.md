@@ -1,7 +1,14 @@
 # Agentic Drive
 
 A prototype "Advanced Google Drive" — an active workspace where autonomous agents
-organize, explain, synthesize, and act on your files instead of just storing them.
+organize, explain, synthesize, and act on your files instead of just storing them. The
+UI is deliberately styled after Google Drive itself (search-first top bar, "+ New"
+button, sidebar nav, grid/list toggle, a details side panel) — not to imitate Google's
+product, but because that chrome is the fastest way to show judges "this is a drive,"
+freeing the actual demo time for the agent behavior that's different from it: the
+search bar answers questions instead of just filtering, the details panel explains a
+filing decision instead of showing file size, and selecting files surfaces a "Draft
+from these" action no file browser has.
 
 See **[BRAINSTORM.md](./BRAINSTORM.md)** for the conceptual vision and the agentic
 user-flows this was designed from before any code was written.
