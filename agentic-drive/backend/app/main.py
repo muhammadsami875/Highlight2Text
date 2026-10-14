@@ -102,6 +102,49 @@ def list_clusters():
     return [{"cluster": name, "files": files} for name, files in sorted(grouped.items())]
 
 
+@app.delete("/api/files/{file_id}")
+def delete_file(file_id: str):
+    f = db.get_file(file_id)
+    if not f:
+        raise HTTPException(404, "File not found")
+    db.delete_file(file_id)
+    db.log_activity("You", f"Deleted '{f['filename']}'.")
+    return {"deleted": file_id}
+
+
+class BulkDeleteRequest(BaseModel):
+    file_ids: list[str]
+
+
+@app.post("/api/files/delete-bulk")
+def delete_files_bulk(req: BulkDeleteRequest):
+    deleted = []
+    for file_id in req.file_ids:
+        f = db.get_file(file_id)
+        if f:
+            db.delete_file(file_id)
+            deleted.append(f["filename"])
+    if deleted:
+        db.log_activity("You", f"Deleted {len(deleted)} file(s): {', '.join(deleted)}.")
+    return {"deleted": deleted}
+
+
+@app.delete("/api/files")
+def reset_drive():
+    count = len(db.list_files())
+    db.delete_all_files()
+    if count:
+        db.log_activity("You", f"Reset the drive — deleted all {count} file(s).")
+    return {"deleted_count": count}
+
+
+@app.get("/api/storage")
+def storage_info():
+    stats = db.storage_stats()
+    quota_bytes = 16 * 1024 ** 3  # cosmetic quota, matching Drive's free-tier scale
+    return {**stats, "quota_bytes": quota_bytes}
+
+
 class AskRequest(BaseModel):
     message: str
     selected_file_ids: list[str] = []

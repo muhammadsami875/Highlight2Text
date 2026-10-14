@@ -38,7 +38,26 @@
       <button class="icon-btn" id="activity-toggle" title="Agent activity">
         <svg class="icon" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm1 11h-2V7h2zm0 4h-2v-2h2z"/></svg>
       </button>
-      <div class="avatar">AD</div>
+      <div class="avatar-wrap">
+        <button class="avatar" id="avatar-btn" title="Account">AD</button>
+        <div class="account-popover hidden" id="account-popover">
+          <div class="account-identity">
+            <div class="avatar avatar-lg">AD</div>
+            <div class="account-name">Demo User</div>
+            <div class="account-email">demo@agentic-drive.local</div>
+          </div>
+          <div class="popover-divider"></div>
+          <div class="account-storage">
+            <div class="storage-bar"><div class="storage-fill" id="popover-storage-fill"></div></div>
+            <div class="storage-label" id="popover-storage-label">Loading storage…</div>
+          </div>
+          <div class="popover-divider"></div>
+          <button class="popover-danger-btn" id="reset-drive-btn">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M6 7h12l-1 13H7zm3-4h6l1 2H8zM9 10v8m3-8v8m3-8v8" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+            Reset drive — delete everything
+          </button>
+        </div>
+      </div>
     </div>
   </header>
 
@@ -109,6 +128,9 @@
         <div class="selection-actions">
           <button class="pill-btn" id="ask-selected-btn">Ask about these</button>
           <button class="pill-btn pill-btn-filled" id="draft-selected-btn">Draft from these</button>
+          <button class="pill-btn pill-btn-danger" id="delete-selected-btn" title="Delete">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M6 7h12l-1 13H7zm3-4h6l1 2H8z"/></svg>
+          </button>
         </div>
       </div>
 
@@ -122,6 +144,17 @@
       </div>
       <div class="details-body" id="details-body"></div>
     </aside>
+  </div>
+
+  <div id="file-menu" class="file-menu hidden">
+    <button data-action="open">
+      <svg class="icon" viewBox="0 0 24 24"><path d="M14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3z"/><path d="M19 19H5V5h7V3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7h-2z"/></svg>
+      Open
+    </button>
+    <button data-action="delete" class="danger">
+      <svg class="icon" viewBox="0 0 24 24"><path d="M6 7h12l-1 13H7zm3-4h6l1 2H8z"/></svg>
+      Delete
+    </button>
   </div>
 
   <div id="file-modal" class="modal hidden">

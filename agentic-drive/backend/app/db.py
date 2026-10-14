@@ -188,3 +188,22 @@ def list_expenses():
             conn, "SELECT * FROM expenses ORDER BY created_at DESC"
         ).fetchall()
     return [dict(r) for r in rows]
+
+
+def delete_file(file_id):
+    with get_conn() as conn:
+        _execute(conn, "DELETE FROM files WHERE id = ?", (file_id,))
+
+
+def delete_all_files():
+    with get_conn() as conn:
+        _execute(conn, "DELETE FROM files")
+
+
+def storage_stats():
+    with get_conn() as conn:
+        row = _execute(
+            conn,
+            "SELECT COUNT(*) AS file_count, COALESCE(SUM(LENGTH(text)), 0) AS used_chars FROM files",
+        ).fetchone()
+    return {"file_count": row["file_count"], "used_bytes": int(row["used_chars"])}

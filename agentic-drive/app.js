@@ -26,6 +26,18 @@ function escapeHtml(str) {
   return div.innerHTML;
 }
 
+function formatBytes(bytes) {
+  if (bytes < 1024) return `${bytes} B`;
+  const units = ["KB", "MB", "GB", "TB"];
+  let value = bytes;
+  let i = -1;
+  do {
+    value /= 1024;
+    i++;
+  } while (value >= 1024 && i < units.length - 1);
+  return `${value.toFixed(value >= 10 || i === 0 ? 0 : 1)} ${units[i]}`;
+}
+
 function timeAgo(ts) {
   const diff = Date.now() / 1000 - ts;
   if (diff < 60) return `${Math.floor(diff)}s ago`;
@@ -63,11 +75,16 @@ async function refreshStatus() {
 }
 
 async function loadAll() {
-  const [clusters, activity] = await Promise.all([api("/api/clusters"), api("/api/activity")]);
+  const [clusters, activity, storage] = await Promise.all([
+    api("/api/clusters"),
+    api("/api/activity"),
+    api("/api/storage"),
+  ]);
   state.clusters = clusters;
   state.files = clusters.flatMap((g) => g.files);
   state.filesById = new Map(state.files.map((f) => [f.id, f]));
   state.activity = activity;
+  state.storage = storage;
   renderSidebarClusters();
   renderStorageMeter();
   renderFileArea();
@@ -91,16 +108,20 @@ function renderSidebarClusters() {
 }
 
 function renderStorageMeter() {
-  const total = state.files.length;
-  const label = $("#storage-label");
-  const fill = $("#storage-fill");
-  if (total === 0) {
-    label.textContent = "No files yet";
-    fill.style.width = "0%";
-    return;
-  }
-  label.textContent = `${total} file${total === 1 ? "" : "s"} organized automatically across ${state.clusters.length} workspace${state.clusters.length === 1 ? "" : "s"}`;
-  fill.style.width = `${Math.min(100, total * 8)}%`;
+  const s = state.storage;
+  if (!s) return;
+  const pct = s.quota_bytes ? Math.min(100, (s.used_bytes / s.quota_bytes) * 100) : 0;
+  const quotaLine = `${formatBytes(s.used_bytes)} of ${formatBytes(s.quota_bytes)} used`;
+  const orgLine =
+    s.file_count === 0
+      ? "No files yet"
+      : `${s.file_count} file${s.file_count === 1 ? "" : "s"} organized automatically across ${state.clusters.length} workspace${state.clusters.length === 1 ? "" : "s"}`;
+
+  $("#storage-fill").style.width = `${pct}%`;
+  $("#storage-label").innerHTML = `${quotaLine}<br>${orgLine}`;
+
+  $("#popover-storage-fill").style.width = `${pct}%`;
+  $("#popover-storage-label").textContent = quotaLine;
 }
 
 function setView(view) {
@@ -159,6 +180,9 @@ function renderGrid(files) {
         <input type="checkbox" class="card-checkbox" ${state.selectedFileIds.has(f.id) ? "checked" : ""} />
         ${fileTypeIcon(f.doc_type, 28)}
         <span class="file-name">${escapeHtml(f.filename)}</span>
+        <button class="icon-btn kebab-btn" title="More options">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M12 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4zm0 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm0 8a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/></svg>
+        </button>
       </div>
       <div class="file-card-body">
         <div class="file-summary">${escapeHtml(f.summary)}</div>
@@ -182,7 +206,10 @@ function renderList(files) {
       <input type="checkbox" class="row-checkbox" ${state.selectedFileIds.has(f.id) ? "checked" : ""} />
       <div class="row-name">${fileTypeIcon(f.doc_type, 24)}<span>${escapeHtml(f.filename)}</span></div>
       <div class="row-cluster">${escapeHtml(f.cluster)}</div>
-      <div class="row-time">${timeAgo(f.created_at)}</div>`;
+      <div class="row-time">${timeAgo(f.created_at)}</div>
+      <button class="icon-btn kebab-btn" title="More options">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M12 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4zm0 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm0 8a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/></svg>
+      </button>`;
     wireFileNode(row, f);
     wrap.appendChild(row);
   }
@@ -193,6 +220,10 @@ function wireFileNode(node, f) {
   const checkbox = node.querySelector("input[type=checkbox]");
   checkbox.addEventListener("click", (e) => e.stopPropagation());
   checkbox.addEventListener("change", (e) => toggleSelect(f.id, e.target.checked));
+  node.querySelector(".kebab-btn").addEventListener("click", (e) => {
+    e.stopPropagation();
+    openFileMenu(e.currentTarget, f);
+  });
   node.addEventListener("click", () => {
     state.focusedFileId = f.id;
     if (state.detailsOpen) {
@@ -203,6 +234,48 @@ function wireFileNode(node, f) {
     }
   });
 }
+
+/* ---------------- per-file kebab menu ---------------- */
+
+function openFileMenu(anchor, f) {
+  const menu = $("#file-menu");
+  menu.dataset.fileId = f.id;
+  menu.dataset.filename = f.filename;
+  const rect = anchor.getBoundingClientRect();
+  menu.style.top = `${rect.bottom + 4}px`;
+  menu.style.left = `${Math.min(rect.left, window.innerWidth - 180)}px`;
+  menu.classList.remove("hidden");
+}
+
+function closeFileMenu() {
+  $("#file-menu").classList.add("hidden");
+}
+
+$$("#file-menu button").forEach((btn) =>
+  btn.addEventListener("click", async () => {
+    const menu = $("#file-menu");
+    const fileId = menu.dataset.fileId;
+    const filename = menu.dataset.filename;
+    closeFileMenu();
+    if (btn.dataset.action === "open") {
+      openFilePreview(fileId);
+    } else if (btn.dataset.action === "delete") {
+      if (!confirm(`Delete "${filename}"? This can't be undone.`)) return;
+      try {
+        await api(`/api/files/${fileId}`, { method: "DELETE" });
+        state.selectedFileIds.delete(fileId);
+        if (state.focusedFileId === fileId) state.focusedFileId = null;
+        await loadAll();
+      } catch (err) {
+        alert(`Delete failed: ${err.message}`);
+      }
+    }
+  })
+);
+
+document.addEventListener("click", (e) => {
+  if (!$("#file-menu").contains(e.target)) closeFileMenu();
+});
 
 function updateSelectionVisuals() {
   $$(".file-card").forEach((el) => el.classList.toggle("selected", state.selectedFileIds.has(el.dataset.fileId)));
@@ -426,6 +499,24 @@ $("#ask-selected-btn").addEventListener("click", () => {
   searchInput.setSelectionRange(searchInput.value.length, searchInput.value.length);
 });
 
+$("#delete-selected-btn").addEventListener("click", async () => {
+  const ids = Array.from(state.selectedFileIds);
+  if (ids.length === 0) return;
+  if (!confirm(`Delete ${ids.length} selected file(s)? This can't be undone.`)) return;
+  try {
+    await api("/api/files/delete-bulk", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ file_ids: ids }),
+    });
+    state.selectedFileIds.clear();
+    renderSelectionBar();
+    await loadAll();
+  } catch (err) {
+    alert(`Delete failed: ${err.message}`);
+  }
+});
+
 $("#draft-selected-btn").addEventListener("click", () => {
   $("#prompt-count").textContent = state.selectedFileIds.size;
   $("#prompt-input").value = "";
@@ -468,11 +559,45 @@ function setViewMode(mode) {
   renderFileArea();
 }
 
+/* ---------------- account popover ---------------- */
+
+$("#avatar-btn").addEventListener("click", (e) => {
+  e.stopPropagation();
+  $("#account-popover").classList.toggle("hidden");
+});
+document.addEventListener("click", (e) => {
+  if (!$("#avatar-btn").contains(e.target) && !$("#account-popover").contains(e.target)) {
+    $("#account-popover").classList.add("hidden");
+  }
+});
+
+$("#reset-drive-btn").addEventListener("click", async () => {
+  if (state.files.length === 0) return;
+  if (!confirm(`Delete all ${state.files.length} file(s) in the drive? This can't be undone.`)) return;
+  try {
+    await api("/api/files", { method: "DELETE" });
+    state.selectedFileIds.clear();
+    state.focusedFileId = null;
+    $("#account-popover").classList.add("hidden");
+    await loadAll();
+  } catch (err) {
+    alert(`Reset failed: ${err.message}`);
+  }
+});
+
 $("#details-toggle").addEventListener("click", toggleDetailsPanel);
 $("#activity-toggle").addEventListener("click", () => {
   if (!state.detailsOpen) toggleDetailsPanel();
   state.detailsTab = "activity";
   renderDetailsPanel();
+});
+
+document.addEventListener("keydown", (e) => {
+  if (e.key !== "Escape") return;
+  closeFileMenu();
+  $("#account-popover").classList.add("hidden");
+  $("#new-menu").classList.add("hidden");
+  $("#search-dropdown").classList.add("hidden");
 });
 
 /* ---------------- boot ---------------- */

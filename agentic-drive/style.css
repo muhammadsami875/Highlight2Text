@@ -142,12 +142,34 @@ button { font-family: inherit; }
   white-space: nowrap;
 }
 .mode-pill.live { background: #e6f4ea; color: var(--green); }
+
+.avatar-wrap { position: relative; margin-left: 4px; }
 .avatar {
   width: 32px; height: 32px; border-radius: 50%;
-  background: var(--blue); color: #fff;
+  background: var(--blue); color: #fff; border: none;
   display: flex; align-items: center; justify-content: center;
-  font-size: 12px; font-weight: 700; margin-left: 4px;
+  font-size: 12px; font-weight: 700; cursor: pointer; font-family: inherit;
 }
+.avatar-lg { width: 56px; height: 56px; font-size: 20px; margin: 0 auto 10px; }
+
+.account-popover {
+  position: absolute; top: 44px; right: 0; width: 280px; z-index: 40;
+  background: #fff; border-radius: 12px; padding: 20px 18px;
+  box-shadow: 0 2px 6px 2px rgba(60,64,67,.15), 0 1px 2px 0 rgba(60,64,67,.3);
+}
+@media (prefers-color-scheme: dark) { .account-popover { background: #2d2e30; } }
+.account-identity { text-align: center; }
+.account-name { font-size: 14px; font-weight: 500; }
+.account-email { font-size: 12.5px; color: var(--text-secondary); margin-top: 2px; }
+.popover-divider { height: 1px; background: var(--border); margin: 16px 0; }
+.account-storage .storage-label { text-align: center; margin-top: 8px; }
+.popover-danger-btn {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  border: 1px solid var(--border); background: none; border-radius: 8px;
+  padding: 10px 12px; font-size: 12.5px; color: var(--red); cursor: pointer;
+}
+.popover-danger-btn:hover { background: #fce8e6; }
+.popover-danger-btn .icon { width: 18px; height: 18px; fill: none; }
 
 /* ---------- Shell ---------- */
 .shell { display: flex; height: calc(100vh - 64px); }
@@ -244,6 +266,9 @@ button { font-family: inherit; }
 .pill-btn:hover { background: var(--hover); }
 .pill-btn-filled { background: var(--blue); color: #fff; border-color: var(--blue); }
 .pill-btn-filled:hover { background: var(--blue-dark); }
+.pill-btn-danger { color: var(--red); border-color: var(--border); padding: 7px 12px; }
+.pill-btn-danger:hover { background: #fce8e6; border-color: var(--red); }
+.pill-btn-danger .icon { width: 16px; height: 16px; fill: currentColor; display: block; }
 @media (prefers-color-scheme: dark) { .pill-btn { background: #2d2e30; } }
 
 .file-area { padding: 8px 24px 40px; flex: 1; }
@@ -273,15 +298,18 @@ button { font-family: inherit; }
 .file-card .file-summary { font-size: 12px; color: var(--text-secondary); line-height: 1.5; }
 .file-card .tag-row { margin-top: 8px; }
 
+.kebab-btn { margin-left: auto; width: 28px; height: 28px; flex: none; }
+.kebab-btn .icon { width: 16px; height: 16px; }
+
 /* List view */
 .file-list { display: flex; flex-direction: column; }
 .file-list-head {
-  display: grid; grid-template-columns: 36px 1fr 180px 140px;
+  display: grid; grid-template-columns: 36px 1fr 180px 140px 40px;
   padding: 0 12px; height: 40px; align-items: center;
   font-size: 12px; color: var(--text-secondary); border-bottom: 1px solid var(--border);
 }
 .file-row {
-  display: grid; grid-template-columns: 36px 1fr 180px 140px;
+  display: grid; grid-template-columns: 36px 1fr 180px 140px 40px;
   align-items: center; height: 48px; padding: 0 12px;
   border-bottom: 1px solid var(--border); cursor: pointer;
 }
@@ -292,6 +320,24 @@ button { font-family: inherit; }
 .file-row .row-name span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
 .file-row .row-cluster { font-size: 12.5px; color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .file-row .row-time { font-size: 12.5px; color: var(--text-secondary); }
+
+/* Shared floating per-file menu (kebab) */
+.file-menu {
+  position: fixed; z-index: 45; min-width: 160px;
+  background: #fff; border-radius: 8px; padding: 6px;
+  box-shadow: 0 2px 6px 2px rgba(60,64,67,.15), 0 1px 2px 0 rgba(60,64,67,.3);
+}
+@media (prefers-color-scheme: dark) { .file-menu { background: #2d2e30; } }
+.file-menu button {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  border: none; background: none; text-align: left;
+  padding: 9px 10px; border-radius: 4px; cursor: pointer;
+  color: var(--text); font-size: 13px;
+}
+.file-menu button:hover { background: var(--hover); }
+.file-menu button.danger { color: var(--red); }
+.file-menu button.danger:hover { background: #fce8e6; }
+.file-menu .icon { fill: currentColor; width: 17px; height: 17px; }
 
 .tag {
   display: inline-block; font-size: 10.5px; padding: 2px 8px; border-radius: 999px;

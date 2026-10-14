@@ -34,6 +34,14 @@ brief's diagram.
 Every agent action — a filing decision, a synthesis, an expense logged — is written to
 an **Activity Feed** so autonomous behavior stays legible instead of opaque.
 
+Drive-management basics are there too, styled the same way: each file has a kebab
+(⋮) menu for **Open** / **Delete**, the selection bar gets a **Delete** action for
+bulk removal, and the avatar in the top-right opens an account popover with a real
+Drive-style storage meter ("X of 16 GB used," computed from actual stored content,
+not a placeholder) and a "Reset drive" action that clears everything. There's no real
+authentication behind the account popover — it's a single-user demo, so the identity
+shown is static rather than faked as a real login.
+
 ## Architecture
 
 ```
@@ -141,6 +149,10 @@ All endpoints are under `/api`:
 - `GET /api/clusters` — files grouped by their auto-assigned cluster
 - `POST /api/ask` — `{ "message": str, "selected_file_ids": [str] }` → routed to
   Retrieval or Synthesis
+- `DELETE /api/files/{id}` — delete one file
+- `POST /api/files/delete-bulk` — `{ "file_ids": [str] }` → delete several at once
+- `DELETE /api/files` — delete every file ("reset drive")
+- `GET /api/storage` — `{ used_bytes, file_count, quota_bytes }` for the storage meter
 - `GET /api/activity` — the agent activity log
 - `GET /api/expenses`, `GET /api/expenses.csv` — the Workflow Agent's expense log
 - `GET /api/status` — which storage backend is active (`postgres` or `sqlite`)
