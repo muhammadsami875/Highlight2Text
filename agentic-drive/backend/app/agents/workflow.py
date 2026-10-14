@@ -2,9 +2,10 @@
 
 Trigger-based, not prompted: whenever the Organizer Agent (or a heuristic check here)
 flags an uploaded file as an invoice, this agent extracts the vendor/amount/date/category
-and appends a row to expenses.csv with zero human intervention, then logs what it did.
+and logs a row to the expenses table with zero human intervention, then logs what it did
+to the Activity Feed. Rows live in the database (not a CSV on disk) so the log survives
+across serverless invocations; /api/expenses.csv renders it to CSV on demand.
 """
-import csv
 import datetime
 import re
 
@@ -17,8 +18,6 @@ CATEGORY_KEYWORDS = {
     "Travel": ("flight", "hotel", "travel", "airfare"),
     "Office": ("office", "supplies", "furniture"),
 }
-
-CSV_HEADER = ["date", "vendor", "amount", "category", "source_file", "file_id"]
 
 
 def looks_like_invoice(doc_type: str, text: str) -> bool:
@@ -37,11 +36,14 @@ def maybe_trigger(file_id: str, filename: str, text: str, doc_type: str) -> dict
     else:
         row = _mock_extract(filename, text)
 
-    _append_csv(row, filename, file_id)
+    db.insert_expense(
+        date=row["date"], vendor=row["vendor"], amount=row["amount"],
+        category=row["category"], source_file=filename, file_id=file_id,
+    )
     db.log_activity(
         "Workflow Agent",
-        f"Detected an invoice in '{filename}' → logged ${row['amount']} to "
-        f"{row['vendor']} under {row['category']} in expenses.csv.",
+        f"Detected an invoice in '{filename}' → logged ${row['amount']:.2f} to "
+        f"{row['vendor']} under {row['category']} in the expense log.",
         file_id=file_id,
     )
     return row
@@ -92,26 +94,5 @@ def _mock_extract(filename: str, text: str) -> dict:
     return {"vendor": vendor, "amount": amount, "date": date, "category": category}
 
 
-def _append_csv(row: dict, filename: str, file_id: str):
-    is_new = not config.EXPENSES_CSV_PATH.exists()
-    with open(config.EXPENSES_CSV_PATH, "a", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=CSV_HEADER)
-        if is_new:
-            writer.writeheader()
-        writer.writerow(
-            {
-                "date": row["date"],
-                "vendor": row["vendor"],
-                "amount": row["amount"],
-                "category": row["category"],
-                "source_file": filename,
-                "file_id": file_id,
-            }
-        )
-
-
 def read_expenses() -> list[dict]:
-    if not config.EXPENSES_CSV_PATH.exists():
-        return []
-    with open(config.EXPENSES_CSV_PATH, newline="") as f:
-        return list(csv.DictReader(f))
+    return db.list_expenses()

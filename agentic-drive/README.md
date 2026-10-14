@@ -16,7 +16,7 @@ agents sit on top of it:
 | **Organizer** | Proactive Organization | Tags every file, assigns it to an existing cluster or starts a new one, and writes a one-line explanation of *why* — no manual folders, ever. |
 | **Retrieval** | Semantic Retrieval | Answers free-text questions ("What was the budget discussed in the Q3 marketing meetings?") by reading across every file and citing sources inline. |
 | **Synthesis** | Cross-Document Synthesis | Reads several selected files and drafts a new document from an instruction (e.g. "draft a unified PRD from these"), then **saves the result back into the drive** as a first-class, tagged, provenance-stamped file. |
-| **Workflow** | Automated Workflows | Triggers automatically (no prompt) when an uploaded file looks like an invoice: extracts vendor/amount/date/category and appends a row to `expenses.csv`. |
+| **Workflow** | Automated Workflows | Triggers automatically (no prompt) when an uploaded file looks like an invoice: extracts vendor/amount/date/category and logs a row to the expense log. |
 
 A thin **Orchestrator** routes the chat box's free text to Retrieval or Synthesis
 depending on whether you've selected files and whether the message reads like a
@@ -29,31 +29,39 @@ an **Activity Feed** so autonomous behavior stays legible instead of opaque.
 ## Architecture
 
 ```
-┌─────────────────────────────── Frontend (static HTML/JS) ───────────────────────────────┐
-│  Workspaces (clusters/files)   │   Ask your drive (chat)   │   Agent activity + expenses │
-└───────────────┬─────────────────────────────┬──────────────────────────┬─────────────────┘
+┌─────────────────────────────── Frontend (static HTML/JS, served from project root) ──────┐
+│  Workspaces (clusters/files)   │   Ask your drive (chat)   │   Agent activity + expenses  │
+└───────────────┬─────────────────────────────┬──────────────────────────┬──────────────────┘
                  │ upload                      │ ask / synthesize         │ poll
                  ▼                             ▼                          ▼
 ┌───────────────────────────────── FastAPI (backend/app) ──────────────────────────────────┐
-│  Ingestion pipeline:  save → extract text → Organizer Agent → index → Workflow Agent      │
+│  Ingestion pipeline:  extract text (in-memory) → Organizer Agent → index → Workflow Agent  │
 │  Chat pipeline:       Orchestrator → Retrieval Agent  |  Synthesis Agent (writes back)     │
-│  Storage:             SQLite (files, tags, clusters, activity log) + flat files on disk    │
-│  Retrieval:           TF-IDF over paragraph chunks (sklearn) → LLM reads top chunks        │
-│  LLM:                 Claude (Anthropic API) when ANTHROPIC_API_KEY is set, else a         │
+│  Storage:             Postgres (DATABASE_URL) when set, else local SQLite — files, tags,   │
+│                       clusters, activity log, and the expense log all live in the DB, not  │
+│                       on disk, so the app has no persistent-filesystem dependency          │
+│  Retrieval:           pure-Python TF-IDF over paragraph chunks → LLM reads top chunks       │
+│  LLM:                 Claude (Anthropic API) when ANTHROPIC_API_KEY is set, else a          │
 │                       deterministic heuristic fallback per agent ("mock mode")             │
 └────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-**Why TF-IDF + LLM instead of a hosted vector DB:** for a prototype, a real embedding
-model dependency (or a paid embeddings API) is the single most likely thing to make the
-demo fail in front of judges on an unfamiliar machine. TF-IDF retrieval + an LLM that
-reads the retrieved passages and synthesizes a cited answer gets the same user-facing
-behavior ("ask anything, get one cited answer") with zero external dependencies beyond
-the LLM call itself, and it degrades gracefully (see "Mock mode" below) even without a
-key. Swapping the retriever for real embeddings (Voyage, OpenAI, etc.) is a one-file
-change in `backend/app/search.py` if you want to extend this past the prototype.
+This runs equally well two ways, with no code changes between them:
+- **Locally** via `./run.sh` — SQLite file on disk, FastAPI serves the frontend itself.
+- **On Vercel** as a Python serverless function (`api/index.py`) — the frontend is served
+  directly by Vercel's CDN from the project root, and the backend talks to Postgres since
+  a serverless function's filesystem is read-only outside of `/tmp` and nothing written
+  there survives past the current invocation.
 
-## Running it
+**Why pure-Python TF-IDF + LLM instead of a hosted vector DB:** a real embedding model
+dependency (or a paid embeddings API, or sklearn/numpy/scipy) is both a likely demo-day
+failure point and unnecessary weight in a serverless function's bundle. TF-IDF retrieval
+(no dependencies at all — see `backend/app/search.py`) + an LLM that reads the retrieved
+passages and synthesizes a cited answer gets the same user-facing behavior ("ask
+anything, get one cited answer") and degrades gracefully (see "Mock mode" below) even
+without a key.
+
+## Running it locally
 
 Requires Python 3.10+.
 
@@ -67,6 +75,30 @@ Then open **http://localhost:8000**. Click **"Load demo files"** to ingest four 
 documents (three Q3 marketing meeting transcripts with a deliberate budget change
 between them, plus a hosting invoice) and watch the Organizer and Workflow agents act
 immediately, or drag in your own files.
+
+## Deploying to Vercel
+
+```bash
+npm i -g vercel     # if you don't already have the CLI
+cd agentic-drive
+vercel              # first deploy — follow the prompts, accept defaults
+```
+
+Vercel auto-detects `api/index.py` (a FastAPI app) as a Python serverless function,
+installs the root `requirements.txt`, and serves `index.html` / `app.js` / `style.css`
+directly from the project root as static assets. `vercel.json` rewrites `/api/*`
+requests to the function; everything else is static.
+
+Before (or after) your first deploy, set these in the Vercel dashboard under
+**Settings → Environment Variables** (or `vercel env add`):
+
+| Variable | Required? | What it does |
+|---|---|---|
+| `ANTHROPIC_API_KEY` | Recommended | Enables live agent reasoning. Without it the deployment runs in mock mode (see below) — it works, but you lose the actual synthesis/tagging intelligence that's the point of the demo. |
+| `DATABASE_URL` (or `POSTGRES_URL`) | **Strongly recommended** | A Postgres connection string. **Without this, the app falls back to a SQLite file under `/tmp`, which is wiped on every cold start** — uploaded files and the activity/expense log will appear to vanish between requests. The easiest path: in the Vercel dashboard, go to **Storage → Create Database → Postgres** and connect it to this project; Vercel sets `POSTGRES_URL` for you automatically, no code changes needed. |
+
+After adding environment variables, redeploy (`vercel --prod`) so the function picks
+them up.
 
 ### Try this demo script (matches the brief's examples)
 
@@ -82,8 +114,8 @@ immediately, or drag in your own files.
    markdown file, and it appears back in the file list, tagged and clustered, with a
    provenance footer naming its sources.
 4. Upload a new file whose text contains the word "invoice" and a dollar amount → the
-   Workflow Agent logs it to `expenses.csv` with no prompt required; download the CSV
-   from the right-hand pane.
+   Workflow Agent logs it to the expense log with no prompt required; download it as
+   CSV from the right-hand pane.
 
 ### Mock mode
 
@@ -127,22 +159,27 @@ honest:
 agentic-drive/
 ├── BRAINSTORM.md          # conceptual vision + agentic user-flows (read this first)
 ├── README.md
-├── run.sh
-├── backend/
-│   ├── requirements.txt
-│   ├── seed_data/          # sample meeting transcripts + invoice for the demo
-│   └── app/
-│       ├── main.py         # FastAPI routes
-│       ├── config.py       # paths + live/mock mode switch
-│       ├── db.py           # SQLite layer
-│       ├── storage.py      # file save + text extraction (txt/md/csv/pdf)
-│       ├── search.py       # TF-IDF retrieval
-│       ├── llm.py          # Claude API wrapper
-│       └── agents/
-│           ├── organizer.py
-│           ├── retrieval.py
-│           ├── synthesis.py
-│           ├── workflow.py
-│           └── orchestrator.py
-└── frontend/                # static HTML/CSS/JS UI, served by FastAPI
+├── run.sh                  # local dev launcher
+├── vercel.json             # rewrites /api/* to the serverless function
+├── requirements.txt        # deps for the Vercel function (fastapi, anthropic, pypdf, psycopg)
+├── index.html, app.js, style.css   # static frontend — served by Vercel's CDN in prod,
+│                                      or by FastAPI itself when running via run.sh
+├── api/
+│   └── index.py            # Vercel entrypoint — re-exports the FastAPI app below
+└── backend/
+    ├── requirements.txt    # same deps + uvicorn, for local dev
+    ├── seed_data/          # sample meeting transcripts + invoice for the demo
+    └── app/
+        ├── main.py         # FastAPI routes
+        ├── config.py       # paths + live/mock mode + sqlite/postgres switch
+        ├── db.py           # storage layer (Postgres via DATABASE_URL, else SQLite)
+        ├── storage.py      # in-memory text extraction (txt/md/csv/pdf) — no disk writes
+        ├── search.py       # pure-Python TF-IDF retrieval, no dependencies
+        ├── llm.py          # Claude API wrapper
+        └── agents/
+            ├── organizer.py
+            ├── retrieval.py
+            ├── synthesis.py
+            ├── workflow.py
+            └── orchestrator.py
 ```

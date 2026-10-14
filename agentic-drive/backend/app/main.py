@@ -1,7 +1,9 @@
+import csv
+import io
 from collections import defaultdict
 
 from fastapi import FastAPI, HTTPException, UploadFile
-from fastapi.responses import FileResponse
+from fastapi.responses import Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -33,13 +35,11 @@ def _public_file(f: dict) -> dict:
 
 def _ingest_bytes(filename: str, content: bytes) -> dict:
     file_id = db.new_id()
-    path = storage.save_bytes(file_id, filename, content)
-    text = storage.extract_text(path, content)
+    text = storage.extract_text(filename, content)
 
     decision = organizer.organize(filename, text)
     stored_id = db.insert_file(
         filename=filename,
-        stored_path=path,
         text=text,
         summary=decision["summary"],
         tags=decision["tags"],
@@ -126,16 +126,30 @@ def expenses():
 
 @app.get("/api/expenses.csv")
 def expenses_csv():
-    if not config.EXPENSES_CSV_PATH.exists():
-        raise HTTPException(404, "No expenses logged yet")
-    return FileResponse(config.EXPENSES_CSV_PATH, filename="expenses.csv")
+    rows = workflow.read_expenses()
+    buf = io.StringIO()
+    writer = csv.DictWriter(buf, fieldnames=["date", "vendor", "amount", "category", "source_file", "file_id"])
+    writer.writeheader()
+    for r in rows:
+        writer.writerow({k: r[k] for k in writer.fieldnames})
+    return Response(
+        content=buf.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=expenses.csv"},
+    )
 
 
 @app.get("/api/status")
 def status():
-    return {"live_mode": config.LIVE_MODE, "model": config.ANTHROPIC_MODEL if config.LIVE_MODE else None}
+    return {
+        "live_mode": config.LIVE_MODE,
+        "model": config.ANTHROPIC_MODEL if config.LIVE_MODE else None,
+        "db": "postgres" if config.DATABASE_URL else "sqlite",
+    }
 
 
-FRONTEND_DIR = config.BASE_DIR.parent / "frontend"
-if FRONTEND_DIR.exists():
+# Local dev only — on Vercel, static files at the project root are served directly by
+# the platform's CDN, not through this function.
+FRONTEND_DIR = config.BASE_DIR.parent
+if not config.ON_VERCEL and (FRONTEND_DIR / "index.html").exists():
     app.mount("/", StaticFiles(directory=str(FRONTEND_DIR), html=True), name="frontend")

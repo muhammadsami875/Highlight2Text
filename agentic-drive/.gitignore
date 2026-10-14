@@ -1,7 +1,5 @@
 backend/.venv/
-backend/data/drive.db
-backend/data/expenses.csv
-backend/data/files/*
-!backend/data/files/.gitkeep
+backend/data/
 __pycache__/
 *.pyc
+.vercel

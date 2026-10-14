@@ -1,19 +1,16 @@
-from pathlib import Path
+"""Text extraction from uploaded bytes.
 
-from . import config
-
-
-def save_bytes(file_id: str, filename: str, content: bytes) -> Path:
-    folder = config.FILES_DIR / file_id
-    folder.mkdir(parents=True, exist_ok=True)
-    path = folder / filename
-    path.write_bytes(content)
-    return path
+Deliberately does not write anything to local disk: this app is designed to run as a
+Vercel serverless function, where the filesystem is read-only outside of /tmp and
+nothing written there survives past the current invocation. Every agent operates on
+the extracted text stored in the database, not on a file path, so no disk persistence
+is needed at all.
+"""
 
 
-def extract_text(path: Path, content: bytes) -> str:
-    suffix = path.suffix.lower()
-    if suffix == ".pdf":
+def extract_text(filename: str, content: bytes) -> str:
+    suffix = filename.lower().rsplit(".", 1)[-1] if "." in filename else ""
+    if suffix == "pdf":
         try:
             from pypdf import PdfReader
             import io

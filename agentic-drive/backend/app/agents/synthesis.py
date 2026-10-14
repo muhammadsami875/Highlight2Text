@@ -9,7 +9,7 @@ which files it was generated from.
 import re
 from collections import Counter
 
-from .. import config, db, llm, storage
+from .. import config, db, llm
 
 
 def synthesize(file_ids: list[str], instruction: str) -> dict:
@@ -24,7 +24,6 @@ def synthesize(file_ids: list[str], instruction: str) -> dict:
 
     filename = _slug(title) + ".md"
     content = f"# {title}\n\n{body}\n\n---\n*Generated from: {', '.join(s['filename'] for s in sources)}*\n"
-    path = storage.save_bytes(db.new_id(), filename, content.encode("utf-8"))
 
     tags = sorted({t for s in sources for t in s["tags"]} | {"synthesis"})
     cluster_counts = Counter(s["cluster"] for s in sources)
@@ -32,7 +31,6 @@ def synthesize(file_ids: list[str], instruction: str) -> dict:
 
     file_id = db.insert_file(
         filename=filename,
-        stored_path=path,
         text=content,
         summary=f"Synthesized from {len(sources)} file(s): {instruction[:120]}",
         tags=list(tags),
