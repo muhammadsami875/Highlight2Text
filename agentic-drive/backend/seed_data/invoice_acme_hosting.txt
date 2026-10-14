@@ -1,0 +1,19 @@
+INVOICE
+
+Vendor: Acme Hosting Co.
+Invoice Number: ACM-20260715-01
+Invoice Date: 2026-07-15
+Bill To: Operations, c/o Accounts Payable
+
+Description                                   Qty    Unit Price    Amount
+----------------------------------------------------------------------------
+Cloud compute — production cluster (July)      1       $980.00      $980.00
+Object storage overage                          1       $160.00      $160.00
+Dedicated IP addresses (3)                      3        $33.33      $100.00
+
+Subtotal:                                                            $1,240.00
+Tax:                                                                      $0.00
+Total Due:                                                           $1,240.00
+
+Payment terms: Net 15. Remit payment to Acme Hosting Co. via ACH.
+Thank you for your business.

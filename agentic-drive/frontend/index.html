@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Agentic Drive</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark">◆</span>
+      <span>Agentic Drive</span>
+    </div>
+    <div class="topbar-actions">
+      <span id="mode-badge" class="badge">checking mode…</span>
+      <label class="upload-btn">
+        Upload file
+        <input id="file-input" type="file" hidden />
+      </label>
+      <button id="seed-btn" class="btn-ghost">Load demo files</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="pane pane-files">
+      <h2>Workspaces</h2>
+      <p class="hint">No folders — every file is filed automatically by the Organizer Agent.
+        Check files to include them in a synthesis request.</p>
+      <div id="clusters"></div>
+    </section>
+
+    <section class="pane pane-chat">
+      <h2>Ask your drive</h2>
+      <p class="hint">Ask a question across every file, or select files on the left and say
+        "draft…" / "summarize…" to have the Synthesis Agent write a new file.</p>
+      <div id="chat-log" class="chat-log"></div>
+      <form id="chat-form" class="chat-form">
+        <input id="chat-input" type="text" autocomplete="off"
+               placeholder='e.g. "What was the budget discussed in the Q3 marketing meetings?"' />
+        <button type="submit">Ask</button>
+      </form>
+      <div id="selection-bar" class="selection-bar"></div>
+    </section>
+
+    <section class="pane pane-activity">
+      <h2>Agent activity</h2>
+      <p class="hint">Everything the agents did on your behalf, unprompted.</p>
+      <div id="activity-feed" class="activity-feed"></div>
+
+      <h2>Expense log</h2>
+      <p class="hint">Written automatically by the Workflow Agent when an invoice is uploaded.</p>
+      <table id="expenses-table" class="expenses-table">
+        <thead><tr><th>Date</th><th>Vendor</th><th>Amount</th><th>Category</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <a id="expenses-download" class="btn-ghost" href="/api/expenses.csv">Download expenses.csv</a>
+    </section>
+  </main>
+
+  <div id="file-modal" class="modal hidden">
+    <div class="modal-card">
+      <button id="modal-close" class="modal-close">&times;</button>
+      <h3 id="modal-title"></h3>
+      <pre id="modal-body"></pre>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

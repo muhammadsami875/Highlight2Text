@@ -1,0 +1,24 @@
+Q3 Marketing Kickoff — Meeting Notes
+Date: 2026-07-01
+Attendees: Priya (Marketing Lead), Jordan (Growth), Sam (Finance)
+
+Agenda: Plan the Q3 marketing push ahead of the autumn product launch.
+
+Priya: For Q3 we're proposing a $50,000 marketing budget, split roughly 60% paid
+social, 25% content/SEO, 15% events. The bulk of spend front-loads into July so we
+build awareness before the September launch.
+
+Jordan: Agreed on front-loading. I'd like to reserve part of the paid social budget
+for a retargeting campaign aimed at last quarter's trial users who didn't convert.
+
+Sam: $50,000 is within the range Finance pre-approved for the quarter, but it's the
+upper bound — if any line item slips, we don't have headroom to add more without
+a follow-up approval.
+
+Priya: Understood. We'll track spend weekly and flag early if anything's trending
+over budget.
+
+Action items:
+- Priya to draft the channel-by-channel budget breakdown by July 5.
+- Jordan to scope the retargeting campaign and estimated CPA by July 8.
+- Sam to confirm the $50,000 ceiling with Finance leadership in writing.

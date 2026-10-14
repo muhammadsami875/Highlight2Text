@@ -1,0 +1,24 @@
+Q3 Marketing Budget Review — Meeting Notes
+Date: 2026-07-20
+Attendees: Priya (Marketing Lead), Sam (Finance), Deepak (VP Marketing)
+
+Agenda: Revisit the Q3 marketing budget after Finance's mid-quarter planning pass.
+
+Sam: Following the leadership review, Finance is revising the Q3 marketing ceiling
+down from the original $50,000 to $42,000. The gap is being reallocated to the
+support team's headcount request.
+
+Priya: That's an 8,000 dollar cut from what we scoped at kickoff. We'll need to pull
+back the events line item first since paid social is already driving most of the
+trial signups.
+
+Deepak: Agreed — cut events, keep paid social and content/SEO roughly intact. Let's
+also pause the retargeting campaign Jordan scoped until we see September's numbers.
+
+Priya: I'll update the channel breakdown and recirculate by end of week. For the
+record: Q3 marketing budget is now $42,000, not the $50,000 discussed at kickoff.
+
+Action items:
+- Priya to recirculate the revised $42,000 budget breakdown by July 24.
+- Sam to confirm the reallocation in the finance system.
+- Jordan's retargeting campaign is on hold pending September data.

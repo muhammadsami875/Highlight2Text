@@ -1,0 +1,141 @@
+from collections import defaultdict
+
+from fastapi import FastAPI, HTTPException, UploadFile
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
+
+from . import config, db, storage
+from .agents import orchestrator, organizer, workflow
+
+app = FastAPI(title="Agentic Drive")
+
+
+@app.on_event("startup")
+def on_startup():
+    db.init_db()
+
+
+def _public_file(f: dict) -> dict:
+    return {
+        "id": f["id"],
+        "filename": f["filename"],
+        "summary": f["summary"],
+        "tags": f["tags"],
+        "cluster": f["cluster"],
+        "cluster_reason": f["cluster_reason"],
+        "doc_type": f["doc_type"],
+        "source_file_ids": f["source_file_ids"],
+        "preview": (f["text"] or "")[:300],
+        "created_at": f["created_at"],
+    }
+
+
+def _ingest_bytes(filename: str, content: bytes) -> dict:
+    file_id = db.new_id()
+    path = storage.save_bytes(file_id, filename, content)
+    text = storage.extract_text(path, content)
+
+    decision = organizer.organize(filename, text)
+    stored_id = db.insert_file(
+        filename=filename,
+        stored_path=path,
+        text=text,
+        summary=decision["summary"],
+        tags=decision["tags"],
+        cluster=decision["cluster"],
+        cluster_reason=decision["cluster_reason"],
+        doc_type=decision["doc_type"],
+        file_id=file_id,
+    )
+    db.log_activity(
+        "Organizer Agent",
+        f"Filed '{filename}' under '{decision['cluster']}' with tags "
+        f"[{', '.join(decision['tags'])}]. {decision['cluster_reason']}",
+        file_id=stored_id,
+    )
+    workflow.maybe_trigger(stored_id, filename, text, decision["doc_type"])
+    return db.get_file(stored_id)
+
+
+@app.post("/api/files/upload")
+async def upload_file(file: UploadFile):
+    content = await file.read()
+    if not content:
+        raise HTTPException(400, "Empty file")
+    record = _ingest_bytes(file.filename, content)
+    return _public_file(record)
+
+
+@app.post("/api/seed")
+def seed():
+    if not config.SEED_DIR.exists():
+        return {"ingested": []}
+    existing_names = {f["filename"] for f in db.list_files()}
+    ingested = []
+    for path in sorted(config.SEED_DIR.iterdir()):
+        if not path.is_file() or path.name in existing_names:
+            continue
+        record = _ingest_bytes(path.name, path.read_bytes())
+        ingested.append(_public_file(record))
+    return {"ingested": ingested}
+
+
+@app.get("/api/files")
+def list_files():
+    return [_public_file(f) for f in db.list_files()]
+
+
+@app.get("/api/files/{file_id}")
+def get_file(file_id: str):
+    f = db.get_file(file_id)
+    if not f:
+        raise HTTPException(404, "File not found")
+    return {**_public_file(f), "text": f["text"]}
+
+
+@app.get("/api/clusters")
+def list_clusters():
+    grouped = defaultdict(list)
+    for f in db.list_files():
+        grouped[f["cluster"]].append(_public_file(f))
+    return [{"cluster": name, "files": files} for name, files in sorted(grouped.items())]
+
+
+class AskRequest(BaseModel):
+    message: str
+    selected_file_ids: list[str] = []
+
+
+@app.post("/api/ask")
+def ask(req: AskRequest):
+    if not req.message.strip():
+        raise HTTPException(400, "message is required")
+    return orchestrator.handle(req.message, req.selected_file_ids)
+
+
+@app.get("/api/activity")
+def activity():
+    return db.list_activity()
+
+
+@app.get("/api/expenses")
+def expenses():
+    return workflow.read_expenses()
+
+
+@app.get("/api/expenses.csv")
+def expenses_csv():
+    if not config.EXPENSES_CSV_PATH.exists():
+        raise HTTPException(404, "No expenses logged yet")
+    return FileResponse(config.EXPENSES_CSV_PATH, filename="expenses.csv")
+
+
+@app.get("/api/status")
+def status():
+    return {"live_mode": config.LIVE_MODE, "model": config.ANTHROPIC_MODEL if config.LIVE_MODE else None}
+
+
+FRONTEND_DIR = config.BASE_DIR.parent / "frontend"
+if FRONTEND_DIR.exists():
+    app.mount("/", StaticFiles(directory=str(FRONTEND_DIR), html=True), name="frontend")
